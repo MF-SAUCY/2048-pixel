@@ -1,0 +1,95 @@
+# 2048 — Pixel 11 build
+
+Gabriele Cirulli's [2048](https://github.com/gabrielecirulli/2048), ad-free and
+retuned for one device instead of for every phone at once.
+
+The game logic is upstream's, used verbatim — `game_manager.js`, `grid.js`,
+`tile.js`, `local_storage_manager.js` and `html_actuator.js` are unmodified
+copies. The merge rules, the 90/10 spawn split and the scoring are the original
+ones. What was rewritten is everything between the game and the screen.
+
+## Layout
+
+```
+upstream/   pristine clone of gabrielecirulli/2048, for reference
+app/        the phone build — a real PWA, this is the one that installs
+dist/       single-file bundle produced from app/, for single-page hosts
+tools/      icon generator and the bundler
+```
+
+## What changed, and why
+
+**The board fills the screen.** Upstream pins the board to 280px on any viewport
+under 520px wide and positions tiles with fixed pixel transforms per breakpoint.
+On a 412px-wide Pixel that wastes a third of the display. Here the board is one
+length, `--board`, and every dimension derives from it; tiles are placed with
+percentages of their own box, so the geometry is resolution-independent. The
+board comes out at **388px instead of 280px — 92% more playing area.**
+
+**Swipe anywhere.** Upstream only listens for swipes on the board itself. This
+build reads them on the whole document, so a flick started on the heading or in
+the margin still moves tiles.
+
+**Fixed a double-fire bug.** Upstream's `bindButtonPress` binds both `click` and
+`touchend`, so one tap runs the handler twice — on the win screen that restarted
+the game and dismissed the message in a single tap. This build binds `click`
+only. The swipe threshold also went from 10px to 20px, so a slightly smudged tap
+is no longer read as a move.
+
+**Wide-gamut tiles.** The 2048 ramp is almost entirely warm orange and gold,
+which is exactly where sRGB clips hardest and where this panel has headroom. The
+warm half of the ramp is specified in `display-p3`, pushed past the sRGB edge
+rather than converted to it. Neutrals are untouched — they carry the game's
+identity and gain nothing. Non-P3 browsers get the original hex values via
+`@supports`.
+
+**Motion tuned for 120Hz.** Slides are 90ms (about 11 frames at 120Hz) on a
+decelerating curve, with the merge pop timed to land just after the slide so the
+two read as one motion. Tiles carry `will-change: transform` to stay on the
+compositor.
+
+**Merge effects.** Merging throws a burst of particles in the tile's own colour,
+drawn on a `display-p3` canvas, scaled by the value merged — a 4 gets a flicker,
+a 1024 gets a shower and a shockwave ring. The loop is delta-timed, so it runs at
+the same speed at 60Hz and 120Hz, and it parks itself when the last particle dies
+rather than holding the display at a high refresh rate. Disabled under
+`prefers-reduced-motion`.
+
+**Haptics.** One short pulse per move rather than per merge, so a four-way
+cascade is a single crisp tick instead of a stutter; 8–22ms, scaled by the
+largest merge. Distinct patterns on win and on game over.
+
+**Offline and installable.** A service worker precaches the whole shell — a dozen
+small files — and serves it cache-first, so the game works in airplane mode once
+installed.
+
+## Running it
+
+Locally:
+
+```bash
+cd app && python -m http.server 8412
+```
+
+Then open `http://localhost:8412`.
+
+To install it on the phone, the files need to be on HTTPS — a service worker will
+not register otherwise. Push `app/` to a GitHub Pages repo, open the page in
+Chrome on the Pixel, and take **Add to Home screen**. It launches standalone,
+with no browser chrome and no network dependency.
+
+## Rebuilding
+
+```bash
+python tools/make_icons.py          # regenerate app/icons/
+python tools/build_single_file.py   # regenerate dist/2048-pixel.html
+```
+
+`dist/2048-pixel.html` inlines the markup, CSS and all eleven scripts into one
+page, keeping the fonts external at the same relative path `app/` uses. Bump
+`CACHE` in `app/sw.js` whenever a shell file changes, or installed copies will
+keep serving the old one.
+
+## Licence
+
+MIT, upstream's — see `app/LICENSE.txt`. Original game by Gabriele Cirulli.
