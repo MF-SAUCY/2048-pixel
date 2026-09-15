@@ -137,12 +137,15 @@ python tools/make_icons.py          # regenerate app/icons/
 python tools/build_single_file.py   # regenerate dist/2048-pixel.html
 ```
 
-`dist/2048-pixel.html` inlines the markup, CSS and eleven of the twelve scripts
-into one
-page — `theme.js` is deliberately left out, so such hosts keep their own theme
-control. Fonts stay external at the same relative path `app/` uses. Bump
-`CACHE` in `app/sw.js` whenever a shell file changes, or installed copies will
-keep serving the old one.
+`dist/2048-pixel.html` inlines the markup, the CSS and eleven of the twelve
+scripts into a single page for hosts that serve only one file. `theme.js` is
+deliberately left out: those hosts set the page theme themselves, and the
+stylesheet already answers to `data-theme`, so the game follows the host instead
+of carrying a toggle that would argue with it. Fonts stay external at the same
+relative path `app/` uses, so one `style/fonts/` directory serves both builds.
+
+Bump `CACHE` in `app/sw.js` whenever a shell file changes, or installed copies
+will keep serving the old one.
 
 ## Licence
 
