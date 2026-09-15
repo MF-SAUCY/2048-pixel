@@ -1,0 +1,725 @@
+/* 2048 — Pixel 11 build.
+ *
+ * Gabriele Cirulli's original game, retuned for one device: a 6.3" 1080x2424
+ * OLED (about 412 x 915 CSS px), 60-120Hz adaptive, P3 wide gamut, 3000 nits,
+ * Tensor G6. Decisions here optimise for that panel rather than for the wide
+ * range of phones a generic build has to survive.
+ *
+ * What upstream did and why it is gone:
+ *   - The board was pinned to 280px on anything under 520px wide, leaving a
+ *     third of this screen empty. Here the board is one length, --board, that
+ *     fills the display width, and every dimension derives from it.
+ *   - Tiles were positioned with fixed px transforms per breakpoint. Here they
+ *     are percentages of the tile's own box, so the geometry is resolution
+ *     independent and the 497ppi panel gets sub-pixel-exact placement.
+ *
+ * Grid math, all as a fraction of --board:
+ *   gap g = 3%, cell c = 21.25%   (4c + 5g = 100%)
+ *   cell origin along an axis = 3% + (index - 1) * 24.25%
+ * translate() resolves % against the element's OWN box, so each board-percentage
+ * is divided by 21.25:  3% -> 14.1176%,  one step 24.25% -> 114.1176%.
+ */
+
+@font-face {
+  font-family: "Clear Sans";
+  src: url("fonts/ClearSans-Light-webfont.woff") format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Clear Sans";
+  src: url("fonts/ClearSans-Regular-webfont.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Clear Sans";
+  src: url("fonts/ClearSans-Bold-webfont.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Structural colours — the cream identity, unchanged. The night palette lower
+     down aliases these same tokens, so every colour is painted explicitly and
+     none is inherited from the host page in either theme. */
+  color-scheme: light;
+
+  --ground: #faf8ef;
+  --ink: #776e65;
+  --ink-muted: rgba(119, 110, 101, 0.85);
+  --ink-light: #f9f6f2;
+  --board-bg: #bbada0;
+  --cell-empty: rgba(238, 228, 218, 0.35);
+  --button: #8f7a66;
+  --button-active: #9f8b77;
+  --score-label: #eee4da;
+  --score-add: rgba(119, 110, 101, 0.9);
+  --overlay: rgba(238, 228, 218, 0.73);
+  --overlay-won: rgba(237, 194, 46, 0.5);
+
+  /* Tile ramp, sRGB. The P3 block below overrides the warm half of it. */
+  --t2: #eee4da;
+  --t4: #ede0c8;
+  --t8: #f2b179;
+  --t16: #f59563;
+  --t32: #f67c5f;
+  --t64: #f65e3b;
+  --t128: #edcf72;
+  --t256: #edcc61;
+  --t512: #edc850;
+  --t1024: #edc53f;
+  --t2048: #edc22e;
+  --tsuper: #3c3a32;
+  --glow: 243, 215, 116;
+
+  /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
+     worth more than the margin. */
+  --gutter: 12px;
+  --chrome: 200px; /* heading + controls + footer + padding */
+  --board-cap: 560px;
+
+  --avail-h: calc(100vh - var(--chrome));
+  --board: min(calc(100vw - 2 * var(--gutter)), var(--avail-h), var(--board-cap));
+
+  --cell: calc(var(--board) * 0.2125);
+  --radius: calc(var(--board) * 0.008);
+  --radius-board: calc(var(--board) * 0.014);
+
+  /* Motion. At 120Hz a 90ms slide is ~11 frames, enough to read as a glide
+     rather than a jump, and short enough that a fast player is never waiting on
+     the animation. The curve is a decelerating ease-out: quick departure, soft
+     arrival, no overshoot to fight the next move. */
+  --slide: 90ms;
+  --slide-ease: cubic-bezier(0.22, 0.85, 0.28, 1);
+}
+
+/* On a phone 100vh is the tall, URL-bar-hidden height, which overflows while
+   the bar is showing. 100svh is the honest one. */
+@supports (height: 100svh) {
+  :root {
+    --avail-h: calc(100svh - var(--chrome));
+  }
+}
+
+/* Wide gamut. The 2048 ramp is almost entirely warm orange and gold — the exact
+   region where sRGB clips hardest and where this panel has the most headroom, so
+   these are pushed past the sRGB edge rather than being straight conversions.
+   Neutrals are left alone: they carry the game's identity and gain nothing. */
+@supports (color: color(display-p3 1 1 1)) {
+  :root {
+    --t8: color(display-p3 0.960 0.695 0.455);
+    --t16: color(display-p3 0.985 0.575 0.355);
+    --t32: color(display-p3 1 0.470 0.340);
+    --t64: color(display-p3 1 0.345 0.190);
+    --t128: color(display-p3 0.940 0.815 0.420);
+    --t256: color(display-p3 0.945 0.800 0.345);
+    --t512: color(display-p3 0.950 0.785 0.270);
+    --t1024: color(display-p3 0.955 0.772 0.190);
+    --t2048: color(display-p3 0.965 0.760 0.100);
+  }
+}
+
+/* ---- night palette ----
+ *
+ * Defined here as --d-* and aliased onto the live tokens by the two blocks
+ * below, so the dark values are written once rather than once per theme state.
+ *
+ * Only the structural colours and the two pale tiles change. The orange-to-gold
+ * ramp is left exactly as it is: those colours were chosen to glow against a
+ * muted board and they do that on a dark ground too, so the reward for reaching
+ * a 512 looks the same at midnight as at noon. What does change is the ground
+ * (warm near-black rather than neutral — grey next to this board reads as dirty,
+ * and near-black costs an OLED almost nothing to light) and the 2 and 4 tiles,
+ * which at #eee4da are near-white and, sixteen at a time, the brightest thing on
+ * a night screen by a wide margin.
+ */
+:root {
+  --d-ground: #14110e;
+  --d-ink: #d6cec3;
+  --d-ink-muted: rgba(214, 206, 195, 0.68);
+  --d-board-bg: #2f2822;
+  --d-cell-empty: rgba(238, 228, 218, 0.04);
+  --d-button: #8f7a66;
+  --d-button-active: #a38d78;
+  --d-score-label: rgba(238, 228, 218, 0.72);
+  --d-score-add: rgba(214, 206, 195, 0.9);
+  --d-overlay: rgba(20, 17, 14, 0.8);
+  --d-overlay-won: rgba(237, 194, 46, 0.34);
+  --d-t2: #4a4137;
+  --d-t4: #5c5044;
+  --d-tsuper: #0d0b09;
+}
+
+/* System dark, unless the page has been explicitly set to light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: var(--d-ground);
+    --ink: var(--d-ink);
+    --ink-muted: var(--d-ink-muted);
+    --board-bg: var(--d-board-bg);
+    --cell-empty: var(--d-cell-empty);
+    --button: var(--d-button);
+    --button-active: var(--d-button-active);
+    --score-label: var(--d-score-label);
+    --score-add: var(--d-score-add);
+    --overlay: var(--d-overlay);
+    --overlay-won: var(--d-overlay-won);
+    --t2: var(--d-t2);
+    --t4: var(--d-t4);
+    --tsuper: var(--d-tsuper);
+  }
+}
+
+/* Explicit dark, so the toggle wins over a light system setting. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: var(--d-ground);
+  --ink: var(--d-ink);
+  --ink-muted: var(--d-ink-muted);
+  --board-bg: var(--d-board-bg);
+  --cell-empty: var(--d-cell-empty);
+  --button: var(--d-button);
+  --button-active: var(--d-button-active);
+  --score-label: var(--d-score-label);
+  --score-add: var(--d-score-add);
+  --overlay: var(--d-overlay);
+  --overlay-won: var(--d-overlay-won);
+  --t2: var(--d-t2);
+  --t4: var(--d-t4);
+  --tsuper: var(--d-tsuper);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none; /* stop pull-to-refresh eating a down-swipe */
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+  font-size: 18px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none; /* swipes are ours, not the browser's */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  width: var(--board);
+  padding-block: 14px;
+  padding-inline: 0;
+}
+
+/* ---- heading ---- */
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+h1.title {
+  margin: 0;
+  font-size: clamp(42px, calc(var(--board) * 0.17), 80px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.scores-container {
+  display: flex;
+  gap: 6px;
+}
+
+.score-container,
+.best-container {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--board-bg);
+  color: var(--ink-light);
+  font-size: clamp(17px, calc(var(--board) * 0.055), 26px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* "Score" / "Best" caption; column-reverse puts it above the number. */
+.score-container::after,
+.best-container::after {
+  content: "Score";
+  color: var(--score-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.best-container::after {
+  content: "Best";
+}
+
+.score-container .score-addition {
+  position: absolute;
+  right: 12px;
+  z-index: 2;
+  color: var(--score-add);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
+  animation: move-up 600ms ease-in;
+  animation-fill-mode: both;
+  pointer-events: none;
+}
+
+/* Percentages of the score box, so the +N starts level with the number and
+   clears the box entirely on its way up rather than crossing the SCORE label. */
+@keyframes move-up {
+  0% {
+    top: 46%;
+    opacity: 1;
+  }
+  100% {
+    top: -62%;
+    opacity: 0;
+  }
+}
+
+/* ---- controls row ---- */
+
+.above-game {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.game-intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.restart-button {
+  flex: 0 0 auto;
+  padding: 0 20px;
+  border-radius: 4px;
+  background: var(--button);
+  color: var(--ink-light);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 46px; /* a comfortable thumb target */
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background-color 160ms ease, color 240ms ease, transform 120ms var(--slide-ease);
+}
+
+.restart-button:active {
+  background: var(--button-active);
+  transform: scale(0.96);
+}
+
+.restart-button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Secondary to New Game, so it takes the board's muted brown rather than the
+   button brown. Injected by theme.js — absent in hosts that own the theme. */
+.theme-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--board-bg);
+  color: var(--ink-light);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 240ms ease, transform 120ms var(--slide-ease);
+}
+
+.theme-toggle:active {
+  transform: scale(0.94);
+}
+
+.theme-toggle:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.theme-toggle svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+/* Cross-fade the surfaces when the theme flips, so the switch reads as the
+   lights going down rather than as a page reload. Tiles are excluded: the
+   actuator recreates them every move, so a colour transition there would never
+   have an old value to animate from. */
+body,
+.game-container,
+.grid-cell,
+.score-container,
+.best-container {
+  transition-property: background-color, color;
+  transition-duration: 240ms;
+  transition-timing-function: ease;
+}
+
+/* ---- board ---- */
+
+.game-container {
+  position: relative;
+  box-sizing: border-box;
+  width: var(--board);
+  height: var(--board);
+  border-radius: var(--radius-board);
+  background: var(--board-bg);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.grid-container,
+.tile-container,
+.fx-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.grid-container {
+  z-index: 1;
+}
+
+.tile-container {
+  z-index: 2;
+}
+
+/* Merge particles. Above the tiles, never in the way of a swipe. */
+.fx-layer {
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-board);
+  pointer-events: none;
+}
+
+.grid-cell {
+  position: absolute;
+  width: 21.25%;
+  height: 21.25%;
+  border-radius: var(--radius);
+  background: var(--cell-empty);
+}
+
+.grid-cell[data-col="1"] { left: 3%; }
+.grid-cell[data-col="2"] { left: 27.25%; }
+.grid-cell[data-col="3"] { left: 51.5%; }
+.grid-cell[data-col="4"] { left: 75.75%; }
+
+.grid-cell[data-row="1"] { top: 3%; }
+.grid-cell[data-row="2"] { top: 27.25%; }
+.grid-cell[data-row="3"] { top: 51.5%; }
+.grid-cell[data-row="4"] { top: 75.75%; }
+
+/* ---- tiles ---- */
+
+.tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 21.25%;
+  height: 21.25%;
+  transition: transform var(--slide) var(--slide-ease);
+  will-change: transform; /* keep all 16 on their own compositor layers */
+}
+
+.tile .tile-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius);
+  background: var(--t2);
+  color: var(--ink);
+  font-size: calc(var(--cell) * 0.52);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Position stops — derivation in the file header. */
+.tile.tile-position-1-1 { transform: translate(14.1176%, 14.1176%); }
+.tile.tile-position-1-2 { transform: translate(14.1176%, 128.2353%); }
+.tile.tile-position-1-3 { transform: translate(14.1176%, 242.3529%); }
+.tile.tile-position-1-4 { transform: translate(14.1176%, 356.4706%); }
+.tile.tile-position-2-1 { transform: translate(128.2353%, 14.1176%); }
+.tile.tile-position-2-2 { transform: translate(128.2353%, 128.2353%); }
+.tile.tile-position-2-3 { transform: translate(128.2353%, 242.3529%); }
+.tile.tile-position-2-4 { transform: translate(128.2353%, 356.4706%); }
+.tile.tile-position-3-1 { transform: translate(242.3529%, 14.1176%); }
+.tile.tile-position-3-2 { transform: translate(242.3529%, 128.2353%); }
+.tile.tile-position-3-3 { transform: translate(242.3529%, 242.3529%); }
+.tile.tile-position-3-4 { transform: translate(242.3529%, 356.4706%); }
+.tile.tile-position-4-1 { transform: translate(356.4706%, 14.1176%); }
+.tile.tile-position-4-2 { transform: translate(356.4706%, 128.2353%); }
+.tile.tile-position-4-3 { transform: translate(356.4706%, 242.3529%); }
+.tile.tile-position-4-4 { transform: translate(356.4706%, 356.4706%); }
+
+.tile-2 .tile-inner   { background: var(--t2); }
+.tile-4 .tile-inner   { background: var(--t4); }
+.tile-8 .tile-inner   { background: var(--t8); color: var(--ink-light); }
+.tile-16 .tile-inner  { background: var(--t16); color: var(--ink-light); }
+.tile-32 .tile-inner  { background: var(--t32); color: var(--ink-light); }
+.tile-64 .tile-inner  { background: var(--t64); color: var(--ink-light); }
+
+.tile-128 .tile-inner {
+  background: var(--t128);
+  color: var(--ink-light);
+  font-size: calc(var(--cell) * 0.42);
+  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.238), inset 0 0 0 1px rgba(255, 255, 255, 0.143);
+}
+
+.tile-256 .tile-inner {
+  background: var(--t256);
+  color: var(--ink-light);
+  font-size: calc(var(--cell) * 0.42);
+  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.317), inset 0 0 0 1px rgba(255, 255, 255, 0.19);
+}
+
+.tile-512 .tile-inner {
+  background: var(--t512);
+  color: var(--ink-light);
+  font-size: calc(var(--cell) * 0.42);
+  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.397), inset 0 0 0 1px rgba(255, 255, 255, 0.238);
+}
+
+.tile-1024 .tile-inner {
+  background: var(--t1024);
+  color: var(--ink-light);
+  font-size: calc(var(--cell) * 0.34);
+  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.476), inset 0 0 0 1px rgba(255, 255, 255, 0.286);
+}
+
+.tile-2048 .tile-inner {
+  background: var(--t2048);
+  color: var(--ink-light);
+  font-size: calc(var(--cell) * 0.34);
+  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.556), inset 0 0 0 1px rgba(255, 255, 255, 0.333);
+}
+
+.tile-super .tile-inner {
+  background: var(--tsuper);
+  color: var(--ink-light);
+  font-size: calc(var(--cell) * 0.29);
+}
+
+/* The panel reports HDR headroom, so let the high tiles actually use it: the
+   gold bloom goes wider and hotter than an SDR screen could show. */
+@media (dynamic-range: high) {
+  .tile-512 .tile-inner,
+  .tile-1024 .tile-inner,
+  .tile-2048 .tile-inner {
+    box-shadow: 0 0 44px 14px rgba(var(--glow), 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+  }
+}
+
+.tile-new .tile-inner {
+  animation: appear 160ms var(--slide-ease) 60ms;
+  animation-fill-mode: backwards;
+}
+
+@keyframes appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The merge pop lands just after the slide finishes, so the two read as one
+   motion rather than as two competing animations. */
+.tile-merged .tile-inner {
+  z-index: 20;
+  animation: pop 220ms var(--slide-ease) 80ms;
+  animation-fill-mode: backwards;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.92);
+  }
+  42% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ---- win / lose overlay ---- */
+
+.game-message {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  border-radius: var(--radius-board);
+  background: var(--overlay);
+  text-align: center;
+  animation: fade-in 800ms ease 1200ms;
+  animation-fill-mode: both;
+}
+
+.game-message p {
+  margin: 0;
+  font-size: calc(var(--board) * 0.125);
+  font-weight: 700;
+}
+
+.game-message .lower {
+  display: flex;
+  gap: 10px;
+}
+
+.game-message a {
+  padding: 0 20px;
+  border-radius: 4px;
+  background: var(--button);
+  color: var(--ink-light);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 46px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.game-message a:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.game-message a.keep-playing-button {
+  display: none;
+}
+
+.game-message.game-won {
+  background: var(--overlay-won);
+  color: var(--ink-light);
+}
+
+.game-message.game-won a.keep-playing-button {
+  display: inline-block;
+}
+
+.game-message.game-won,
+.game-message.game-over {
+  display: flex;
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ---- footer ---- */
+
+.game-explanation {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.game-explanation a {
+  color: inherit;
+}
+
+.game-explanation .important {
+  font-weight: 700;
+}
+
+/* The arrow-key hint is noise on a touchscreen and the swipe hint is noise on a
+   desktop; show whichever matches the pointer. */
+.hint-touch {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .hint-keys {
+    display: none;
+  }
+  .hint-touch {
+    display: inline;
+  }
+}
+
+/* Landscape: reclaim the chrome so the board keeps its size. */
+@media (max-height: 560px) {
+  :root {
+    --chrome: 150px;
+  }
+  .container {
+    gap: 8px;
+  }
+  .game-explanation {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .tile .tile-inner,
+  .game-message,
+  .score-addition,
+  .restart-button {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}

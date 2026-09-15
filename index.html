@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>2048</title>
+  <meta name="description" content="2048 — the original game by Gabriele Cirulli, ad-free and built to play on a phone.">
+
+  <!-- viewport-fit=cover lets the page run under the notch; the safe-area
+       insets below keep the content clear of it. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <!-- Kept as a single tag with no media query: theme.js rewrites it, because an
+       explicit choice has to beat the system setting here too, and the Android
+       status bar reads whatever this says. -->
+  <meta name="theme-color" content="#faf8ef">
+  <meta name="color-scheme" content="light dark">
+
+  <script>
+    // Applied before first paint so a stored night theme does not flash cream.
+    try {
+      var t = localStorage.getItem("2048-theme");
+      if (t === "light" || t === "dark") {
+        document.documentElement.setAttribute("data-theme", t);
+        // The meta above is already parsed, so this updates it rather than
+        // adding a second one for theme.js to disagree with.
+        document.querySelector('meta[name="theme-color"]')
+          .setAttribute("content", t === "dark" ? "#14110e" : "#faf8ef");
+      }
+    } catch (e) {}
+  </script>
+
+  <link rel="stylesheet" href="style/main.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+
+  <!-- iOS still reads these rather than the manifest for home-screen launches. -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="2048">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <style>
+    /* Clear the system bars when launched full-screen from the home screen. */
+    body {
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="heading">
+      <h1 class="title">2048</h1>
+      <div class="scores-container">
+        <div class="score-container">0</div>
+        <div class="best-container">0</div>
+      </div>
+    </div>
+
+    <div class="above-game">
+      <p class="game-intro">Join the numbers and get to the <strong>2048 tile!</strong></p>
+      <a class="restart-button" href="#" role="button">New Game</a>
+    </div>
+
+    <div class="game-container">
+      <div class="game-message">
+        <p></p>
+        <div class="lower">
+          <a class="keep-playing-button" href="#" role="button">Keep going</a>
+          <a class="retry-button" href="#" role="button">Try again</a>
+        </div>
+      </div>
+
+      <div class="grid-container">
+        <div class="grid-cell" data-row="1" data-col="1"></div>
+        <div class="grid-cell" data-row="1" data-col="2"></div>
+        <div class="grid-cell" data-row="1" data-col="3"></div>
+        <div class="grid-cell" data-row="1" data-col="4"></div>
+        <div class="grid-cell" data-row="2" data-col="1"></div>
+        <div class="grid-cell" data-row="2" data-col="2"></div>
+        <div class="grid-cell" data-row="2" data-col="3"></div>
+        <div class="grid-cell" data-row="2" data-col="4"></div>
+        <div class="grid-cell" data-row="3" data-col="1"></div>
+        <div class="grid-cell" data-row="3" data-col="2"></div>
+        <div class="grid-cell" data-row="3" data-col="3"></div>
+        <div class="grid-cell" data-row="3" data-col="4"></div>
+        <div class="grid-cell" data-row="4" data-col="1"></div>
+        <div class="grid-cell" data-row="4" data-col="2"></div>
+        <div class="grid-cell" data-row="4" data-col="3"></div>
+        <div class="grid-cell" data-row="4" data-col="4"></div>
+      </div>
+
+      <div class="tile-container"></div>
+    </div>
+
+    <p class="game-explanation">
+      <span class="hint-keys"><strong class="important">How to play:</strong> use the <strong>arrow keys</strong> to move the tiles.</span>
+      <span class="hint-touch"><strong class="important">How to play:</strong> <strong>swipe anywhere</strong> to move the tiles.</span>
+      When two tiles with the same number touch, they <strong>merge into one.</strong>
+      <br>
+      Original game by <a href="https://play2048.co" rel="noopener">Gabriele Cirulli</a> — MIT licensed.
+    </p>
+  </div>
+
+  <script src="js/bind_polyfill.js"></script>
+  <script src="js/classlist_polyfill.js"></script>
+  <script src="js/animframe_polyfill.js"></script>
+  <script src="js/input_manager.js"></script>
+  <script src="js/html_actuator.js"></script>
+  <script src="js/grid.js"></script>
+  <script src="js/tile.js"></script>
+  <script src="js/local_storage_manager.js"></script>
+  <script src="js/game_manager.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/application.js"></script>
+  <script>
+    // Offline play. Registration failing (file://, no HTTPS) is not fatal —
+    // the game runs regardless, it just will not be installable.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("sw.js").catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>
