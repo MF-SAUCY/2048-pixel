@@ -1,0 +1,436 @@
+<title>2048 Tile Ramp</title>
+
+<style>
+  @font-face {
+    font-family: "Clear Sans";
+    src: url("style/fonts/ClearSans-Regular-webfont.woff") format("woff");
+    font-weight: 400;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: "Clear Sans";
+    src: url("style/fonts/ClearSans-Bold-webfont.woff") format("woff");
+    font-weight: 700;
+    font-display: swap;
+  }
+
+  :root {
+    color-scheme: light;
+    --page: #f6f3ea;
+    --ink: #6f665c;
+    --ink-strong: #4a423a;
+    --ink-faint: #9a9086;
+    --rule: rgba(119, 110, 101, 0.16);
+    --card: #fffdf7;
+    --flag: #a8402c;
+    --flag-bg: rgba(168, 64, 44, 0.1);
+    --good: #3f7a52;
+    --good-bg: rgba(63, 122, 82, 0.12);
+
+    --board-day: #bbada0;
+    --board-night: #2f2822;
+
+    --tile: clamp(72px, 19.5vw, 124px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #17140f;
+      --ink: #b4aa9e;
+      --ink-strong: #e4dbcf;
+      --ink-faint: #7d7368;
+      --rule: rgba(228, 219, 207, 0.14);
+      --card: #201c16;
+      --flag: #e58b72;
+      --flag-bg: rgba(229, 139, 114, 0.14);
+      --good: #86c79a;
+      --good-bg: rgba(134, 199, 154, 0.14);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #17140f;
+    --ink: #b4aa9e;
+    --ink-strong: #e4dbcf;
+    --ink-faint: #7d7368;
+    --rule: rgba(228, 219, 207, 0.14);
+    --card: #201c16;
+    --flag: #e58b72;
+    --flag-bg: rgba(229, 139, 114, 0.14);
+    --good: #86c79a;
+    --good-bg: rgba(134, 199, 154, 0.14);
+  }
+
+  body {
+    margin: 0;
+    padding-block: 26px 40px;
+    padding-inline: 16px;
+    background: var(--page);
+    color: var(--ink);
+    font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .wrap { max-width: 560px; margin: 0 auto; }
+
+  h1 {
+    margin: 0 0 6px;
+    color: var(--ink-strong);
+    font-size: clamp(30px, 8vw, 44px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .sub { margin: 0 0 18px; max-width: 46ch; }
+  .sub b { color: var(--ink-strong); }
+
+  .headline {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0 0 20px;
+  }
+
+  .stat {
+    flex: 1 1 150px;
+    padding: 10px 13px;
+    border-radius: 7px;
+    background: var(--card);
+    border: 1px solid var(--rule);
+  }
+
+  .stat dt {
+    margin: 0 0 3px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .stat dd {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink-strong);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat dd s {
+    color: var(--ink-faint);
+    font-weight: 400;
+    text-decoration-thickness: 1px;
+  }
+
+  .stat dd em {
+    font-style: normal;
+    color: var(--good);
+  }
+
+  /* --- board switch --- */
+
+  .switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .switch-label {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .seg {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--rule);
+  }
+
+  .seg button {
+    padding: 6px 15px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .seg button[aria-pressed="true"] {
+    background: var(--card);
+    color: var(--ink-strong);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  }
+
+  .seg button:focus-visible {
+    outline: 2px solid var(--ink-strong);
+    outline-offset: 2px;
+  }
+
+  /* --- columns --- */
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .col > h2 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .col > .verdict {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    min-height: 3.9em;
+  }
+
+  .col.was > .verdict { color: var(--flag); }
+  .col.now > .verdict { color: var(--good); }
+
+  .stack { padding: 7px; border-radius: 8px; background: var(--board); }
+
+  /* --- tiles --- */
+
+  .tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: var(--tile);
+    border-radius: 5px;
+    background: var(--c);
+    color: var(--fg);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  }
+
+  .tile.glow {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24),
+                0 0 16px 2px color-mix(in srgb, var(--c) 30%, transparent);
+  }
+
+  .tile .v {
+    font-size: clamp(19px, 5.2vw, 31px);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .tile .l {
+    margin-top: 3px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- delta chips --- */
+
+  .gap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+  }
+
+  .chip.bad { background: var(--flag-bg); color: var(--flag); }
+
+  .chip.bad::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* --- footer --- */
+
+  .note {
+    margin-top: 26px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px;
+  }
+
+  .note p { margin: 0 0 9px; }
+  .note p:last-child { margin: 0; }
+  .note b { color: var(--ink-strong); }
+
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.92em;
+  }
+</style>
+
+<div class="wrap">
+  <h1>2048 Tile Ramp</h1>
+  <p class="sub">
+    Every tile colour, measured. <b>L*</b> under each number is its lightness;
+    the chip between two tiles is <b>ΔE2000</b>, how different they look to a
+    person. <b>1.0</b> is the smallest difference anyone can detect, and
+    <b>under 5</b> reads as the same colour mid-game.
+  </p>
+
+  <dl class="headline">
+    <div class="stat">
+      <dt>Closest pair</dt>
+      <dd><s>ΔE 2.18</s> → <em>ΔE 10.49</em></dd>
+    </div>
+    <div class="stat">
+      <dt>Worst text contrast</dt>
+      <dd><s>2.79:1</s> → <em>5.15:1</em></dd>
+    </div>
+  </dl>
+
+  <div class="switch">
+    <span class="switch-label">Board</span>
+    <div class="seg" role="group" aria-label="Board background">
+      <button type="button" id="board-day" aria-pressed="true">Day</button>
+      <button type="button" id="board-night" aria-pressed="false">Night</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="col was">
+      <h2>Was</h2>
+      <p class="verdict">Four gold steps under ΔE 3 — five tiles that are
+        effectively one colour. Orange tiles carried white text at 2.8:1.</p>
+      <div class="stack" id="stack-was"></div>
+    </div>
+    <div class="col now">
+      <h2>Now</h2>
+      <p class="verdict">Cool to warm, ending on the old 64. Every adjacent pair
+        clears ΔE 10, and one near-black ink reads on all of them.</p>
+      <div class="stack" id="stack-now"></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><b>Why the old golds collided.</b> Upstream varied almost nothing but the
+      blue channel across 128→2048, so all five landed within 3.3 points of
+      lightness. Lightness is what the eye separates first; hold it constant and
+      the tiles become interchangeable at a glance.</p>
+    <p><b>How the new ramp is drawn.</b> Hue rotates 278°→43°, cool to warm.
+      Chroma climbs the whole way so the ramp intensifies rather than merely
+      rotating. Lightness <em>arcs</em> — up through the yellow-greens, where
+      those hues naturally sit, then down to the terminal red — which gives
+      every pair a lightness step to go with the hue step in both halves. It is
+      solved in CIE LCh by <code>tools/make_gradient.py</code>, not picked by
+      hand, and the search maximises the worst adjacent pair subject to a
+      contrast floor.</p>
+    <p><b>One ink, not two.</b> Upstream switched from dark text to white
+      partway up. With lightness arcing there is no single switch point that
+      works, so every tile takes the same near-black <code>#241f1a</code>. Worst
+      case on the ramp is 5.15:1, which clears the 4.5:1 normal-text bar, never
+      mind the 3:1 that large bold numerals actually have to meet.</p>
+    <p><b>Past 2048</b> the ramp has nowhere warmer to go, so that tile drops out
+      of it entirely — near-black, the one value the gradient never visits.
+      Switch the board to <b>Night</b> to see it against the dark ground.</p>
+    <p>Measured in CIE Lab from the display-p3 values, which is what the Pixel
+      actually shows.</p>
+  </div>
+</div>
+
+<script>
+  var WAS = [
+    {v:"2",    d:{day:"#eee4da", night:"#4a4137"}, L:91.1, dE:null,  ink:"dark"},
+    {v:"4",    d:{day:"#ede0c8", night:"#5c5044"}, L:89.6, dE:5.57,  ink:"dark"},
+    {v:"8",    c:"color(display-p3 0.960 0.695 0.455)", L:77.7, dE:19.98},
+    {v:"16",   c:"color(display-p3 0.985 0.575 0.355)", L:71.6, dE:10.28},
+    {v:"32",   c:"color(display-p3 1 0.470 0.340)",     L:67.0, dE:9.35},
+    {v:"64",   c:"color(display-p3 1 0.345 0.190)",     L:61.6, dE:6.87},
+    {v:"128",  c:"color(display-p3 0.940 0.815 0.420)", L:84.3, dE:40.48, glow:1},
+    {v:"256",  c:"color(display-p3 0.945 0.800 0.345)", L:83.3, dE:2.75,  glow:1},
+    {v:"512",  c:"color(display-p3 0.950 0.785 0.270)", L:82.3, dE:2.51,  glow:1},
+    {v:"1024", c:"color(display-p3 0.955 0.772 0.190)", L:81.5, dE:2.30,  glow:1},
+    {v:"2048", c:"color(display-p3 0.965 0.760 0.100)", L:81.0, dE:2.18,  glow:1},
+    {v:"4096", d:{day:"#3c3a32", night:"#0d0b09"},      L:24.4, dE:62.48}
+  ];
+
+  var NOW = [
+    {v:"2",    c:"color(display-p3 0.464 0.564 0.793)", L:60.0, dE:null,  ink:"tile"},
+    {v:"4",    c:"color(display-p3 0.314 0.663 0.914)", L:66.3, dE:14.79, ink:"tile"},
+    {v:"8",    c:"color(display-p3 0.000 0.745 0.942)", L:71.2, dE:10.49, ink:"tile"},
+    {v:"16",   c:"color(display-p3 0.000 0.803 0.881)", L:74.9, dE:10.58, ink:"tile"},
+    {v:"32",   c:"color(display-p3 0.000 0.845 0.771)", L:77.1, dE:13.19, ink:"tile"},
+    {v:"64",   c:"color(display-p3 0.321 0.856 0.593)", L:77.9, dE:13.37, ink:"tile"},
+    {v:"128",  c:"color(display-p3 0.510 0.835 0.400)", L:77.4, dE:12.07, ink:"tile", glow:1},
+    {v:"256",  c:"color(display-p3 0.667 0.780 0.228)", L:75.5, dE:13.64, ink:"tile", glow:1},
+    {v:"512",  c:"color(display-p3 0.808 0.687 0.112)", L:72.2, dE:18.14, ink:"tile", glow:1},
+    {v:"1024", c:"color(display-p3 0.926 0.548 0.108)", L:67.6, dE:21.28, ink:"tile", glow:1},
+    {v:"2048", c:"color(display-p3 1.000 0.345 0.190)", L:61.6, dE:21.43, ink:"tile", glow:1},
+    {v:"4096", d:{day:"#3c3a32", night:"#0d0b09"},      L:24.4, dE:46.74}
+  ];
+
+  var board = "day";
+
+  function render(el, ramp) {
+    var html = "";
+    ramp.forEach(function (t, i) {
+      if (i > 0 && t.dE !== null && t.dE !== undefined) {
+        html += '<div class="gap"><span class="chip' + (t.dE < 5 ? " bad" : "") +
+                '">ΔE ' + t.dE.toFixed(2) + "</span></div>";
+      }
+      var fill = t.d ? t.d[board] : t.c;
+      var fg;
+      if (t.ink === "tile") fg = "#241f1a";            // the new single ink
+      else if (t.ink === "dark") fg = board === "day" ? "#776e65" : "#d6cec3";
+      else fg = "#f9f6f2";                             // upstream's white
+      html += '<div class="tile' + (t.glow ? " glow" : "") +
+              '" style="--c:' + fill + ';--fg:' + fg + '">' +
+              '<span class="v">' + t.v + "</span>" +
+              '<span class="l">L* ' + t.L.toFixed(0) + "</span></div>";
+    });
+    el.innerHTML = html;
+  }
+
+  function paint() {
+    document.documentElement.style.setProperty(
+      "--board", board === "day" ? "var(--board-day)" : "var(--board-night)");
+    render(document.getElementById("stack-was"), WAS);
+    render(document.getElementById("stack-now"), NOW);
+    document.getElementById("board-day")
+      .setAttribute("aria-pressed", String(board === "day"));
+    document.getElementById("board-night")
+      .setAttribute("aria-pressed", String(board === "night"));
+  }
+
+  document.getElementById("board-day").addEventListener("click", function () {
+    board = "day";
+    paint();
+  });
+  document.getElementById("board-night").addEventListener("click", function () {
+    board = "night";
+    paint();
+  });
+
+  paint();
+</script>

@@ -14,7 +14,7 @@ ones. What was rewritten is everything between the game and the screen.
 upstream/   pristine clone of gabrielecirulli/2048, for reference (gitignored)
 app/        the phone build — a real PWA, this is the one that installs
 dist/       single-file bundle produced from app/, for single-page hosts
-tools/      icon generator and the bundler
+tools/      icon generator, bundler, and the colour-ramp solver and checker
 ```
 
 `upstream/` is not tracked; it is the unmodified original, so re-create it with
@@ -40,12 +40,39 @@ the game and dismissed the message in a single tap. This build binds `click`
 only. The swipe threshold also went from 10px to 20px, so a slightly smudged tap
 is no longer read as a move.
 
-**Wide-gamut tiles.** The 2048 ramp is almost entirely warm orange and gold,
-which is exactly where sRGB clips hardest and where this panel has headroom. The
-warm half of the ramp is specified in `display-p3`, pushed past the sRGB edge
-rather than converted to it. Neutrals are untouched — they carry the game's
-identity and gain nothing. Non-P3 browsers get the original hex values via
-`@supports`.
+**A cool-to-warm tile ramp.** Upstream's five gold tiles (128→2048) vary almost
+nothing but the blue channel, so they land within 3.3 points of lightness and the
+closest pair measures **ΔE2000 2.18** — barely twice the smallest difference a
+person can detect. In practice they are one colour with five numbers on it.
+
+This build replaces the whole ramp with a temperature gradient: cool blue at 2,
+warming through cyan, teal, green and gold, landing on the hot red-orange that
+used to sit on 64. It is solved in CIE LCh by `tools/make_gradient.py` rather
+than picked by hand — hue rotates 278°→43°, chroma climbs throughout, and
+lightness *arcs* up through the yellow-greens before falling to the terminal red,
+so every pair gets a lightness step to go with the hue step. The search maximises
+the worst adjacent pair subject to a contrast floor.
+
+Result: **worst adjacent pair ΔE 10.49**, against 2.18 before.
+
+The ramp is specified in `display-p3` — the cyan-to-green stretch sits well
+outside sRGB — with clipped hex values as the `@supports` fallback. The ground
+and board are untouched; they carry the game's identity and gain nothing from
+the extra gamut.
+
+**One ink for every tile.** Upstream switches from dark text to white partway up
+the ramp and manages only about **2.8:1** on its orange tiles, below the 3:1 that
+large bold text has to meet. With lightness arcing there is no single switch
+point, so every tile takes the same near-black `#241f1a`; the worst case on the
+ramp is **5.15:1**, which clears even the stricter 4.5:1 normal-text bar.
+
+Each tile class sets one custom property, `--c`. Background and glow both read
+from it, so a tile's hue lives in exactly one place — and the bloom on the high
+tiles takes the tile's own colour via `color-mix` instead of a fixed gold, so a
+green 256 glows green and the red 2048 glows red.
+
+Run `python tools/check_ramp.py` to re-measure any ramp, and
+`python tools/make_gradient.py` to regenerate this one.
 
 **Motion tuned for 120Hz.** Slides are 90ms (about 11 frames at 120Hz) on a
 decelerating curve, with the merge pop timed to land just after the slide so the
@@ -66,13 +93,14 @@ largest merge. Distinct patterns on win and on game over.
 **Day and night.** Three states, not two: with nothing stored the page follows
 the system, so Android's scheduled dark theme moves it at sunset on its own; the
 toggle stores an explicit choice that overrides the system in both directions.
-Only the structural colours and the two pale tiles change — the orange-to-gold
-ramp is identical in both themes, because those colours were chosen to glow
-against a muted board and they do that on a dark ground too. The ground is a warm
-near-black rather than a neutral grey, which next to this board would read as
-dirty, and which an OLED lights for almost nothing. The toggle is injected by
-`theme.js` at runtime, so hosts that own the page theme get the themed game
-without a control fighting them for it.
+Only the structural colours change. The gradient is identical in both themes,
+since every stop is a mid-lightness saturated colour that holds against a cream
+board and a near-black one alike — something the old ramp could not claim, as its
+2 and 4 were near-white and had to be darkened separately for night play. The
+ground is a warm near-black rather than a neutral grey, which next to this board
+would read as dirty. The toggle is injected by `theme.js` at runtime, so hosts
+that own the page theme get the themed game without a control fighting them for
+it.
 
 **Offline and installable.** A service worker precaches the whole shell — a dozen
 small files — and serves it cache-first, so the game works in airplane mode once

@@ -66,20 +66,36 @@
   --overlay: rgba(238, 228, 218, 0.73);
   --overlay-won: rgba(237, 194, 46, 0.5);
 
-  /* Tile ramp, sRGB. The P3 block below overrides the warm half of it. */
-  --t2: #eee4da;
-  --t4: #ede0c8;
-  --t8: #f2b179;
-  --t16: #f59563;
-  --t32: #f67c5f;
-  --t64: #f65e3b;
-  --t128: #edcf72;
-  --t256: #edcc61;
-  --t512: #edc850;
-  --t1024: #edc53f;
-  --t2048: #edc22e;
+  /* Tile ramp, sRGB fallback. The P3 block below restates all of it.
+   *
+   * A temperature gradient: cool blue at 2, warming through cyan, teal, green
+   * and gold, landing on the hot red-orange at 2048. Generated in CIE LCh by
+   * tools/make_gradient.py rather than picked by hand, because the thing that
+   * matters is that neighbours stay apart — every adjacent pair is at or above
+   * dE2000 10.49, where the gold run it replaces bottomed out at 2.18.
+   *
+   * Lightness arcs rather than descends: it climbs from the blue end through
+   * the yellow-greens, which is where those hues naturally sit, then falls to
+   * the terminal red. That gives every pair a lightness step to go with the hue
+   * step, in both halves of the ramp.
+   */
+  --t2: #6f91cf;
+  --t4: #18abef;
+  --t8: #00bee7;
+  --t16: #00ccda;
+  --t32: #00d5c3;
+  --t64: #00db97;
+  --t128: #63d754;
+  --t256: #a4c800;
+  --t512: #d2ae00;
+  --t1024: #f28b00;
+  --t2048: #ff6035;
   --tsuper: #3c3a32;
-  --glow: 243, 215, 116;
+
+  /* One ink for every tile. Upstream switched from dark to light text partway
+     up the ramp; with lightness arcing, no single switch point works, and this
+     near-black clears 5.15:1 against the worst tile on the ramp. */
+  --tile-ink: #241f1a;
 
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
      worth more than the margin. */
@@ -110,21 +126,24 @@
   }
 }
 
-/* Wide gamut. The 2048 ramp is almost entirely warm orange and gold — the exact
-   region where sRGB clips hardest and where this panel has the most headroom, so
-   these are pushed past the sRGB edge rather than being straight conversions.
-   Neutrals are left alone: they carry the game's identity and gain nothing. */
+/* Wide gamut. The ramp is drawn at high chroma the whole way round, and the
+   cyan-to-green stretch in particular sits well outside sRGB — these are the
+   colours the ramp was actually solved for, with the hex values above as the
+   clipped fallback. The board and ground stay as they are: they carry the
+   game's identity and gain nothing from the extra gamut. */
 @supports (color: color(display-p3 1 1 1)) {
   :root {
-    --t8: color(display-p3 0.960 0.695 0.455);
-    --t16: color(display-p3 0.985 0.575 0.355);
-    --t32: color(display-p3 1 0.470 0.340);
-    --t64: color(display-p3 1 0.345 0.190);
-    --t128: color(display-p3 0.940 0.815 0.420);
-    --t256: color(display-p3 0.945 0.800 0.345);
-    --t512: color(display-p3 0.950 0.785 0.270);
-    --t1024: color(display-p3 0.955 0.772 0.190);
-    --t2048: color(display-p3 0.965 0.760 0.100);
+    --t2: color(display-p3 0.464 0.564 0.793);
+    --t4: color(display-p3 0.314 0.663 0.914);
+    --t8: color(display-p3 0.000 0.745 0.942);
+    --t16: color(display-p3 0.000 0.803 0.881);
+    --t32: color(display-p3 0.000 0.845 0.771);
+    --t64: color(display-p3 0.321 0.856 0.593);
+    --t128: color(display-p3 0.510 0.835 0.400);
+    --t256: color(display-p3 0.667 0.780 0.228);
+    --t512: color(display-p3 0.808 0.687 0.112);
+    --t1024: color(display-p3 0.926 0.548 0.108);
+    --t2048: color(display-p3 1.000 0.345 0.190);
   }
 }
 
@@ -133,14 +152,13 @@
  * Defined here as --d-* and aliased onto the live tokens by the two blocks
  * below, so the dark values are written once rather than once per theme state.
  *
- * Only the structural colours and the two pale tiles change. The orange-to-gold
- * ramp is left exactly as it is: those colours were chosen to glow against a
- * muted board and they do that on a dark ground too, so the reward for reaching
- * a 512 looks the same at midnight as at noon. What does change is the ground
- * (warm near-black rather than neutral — grey next to this board reads as dirty,
- * and near-black costs an OLED almost nothing to light) and the 2 and 4 tiles,
- * which at #eee4da are near-white and, sixteen at a time, the brightest thing on
- * a night screen by a wide margin.
+ * Only the structural colours change, plus the tile past 2048. The gradient is
+ * identical in both themes: every one of its stops is a mid-lightness saturated
+ * colour that holds against a cream board and a near-black one alike, which the
+ * old ramp could not claim — its 2 and 4 were near-white and had to be darkened
+ * for night play. What does change is the ground, a warm near-black rather than
+ * a neutral grey, since grey next to this board reads as dirty and near-black
+ * costs an OLED almost nothing to light.
  */
 :root {
   --d-ground: #14110e;
@@ -154,8 +172,6 @@
   --d-score-add: rgba(214, 206, 195, 0.9);
   --d-overlay: rgba(20, 17, 14, 0.8);
   --d-overlay-won: rgba(237, 194, 46, 0.34);
-  --d-t2: #4a4137;
-  --d-t4: #5c5044;
   --d-tsuper: #0d0b09;
 }
 
@@ -174,8 +190,6 @@
     --score-add: var(--d-score-add);
     --overlay: var(--d-overlay);
     --overlay-won: var(--d-overlay-won);
-    --t2: var(--d-t2);
-    --t4: var(--d-t4);
     --tsuper: var(--d-tsuper);
   }
 }
@@ -194,8 +208,6 @@
   --score-add: var(--d-score-add);
   --overlay: var(--d-overlay);
   --overlay-won: var(--d-overlay-won);
-  --t2: var(--d-t2);
-  --t4: var(--d-t4);
   --tsuper: var(--d-tsuper);
 }
 
@@ -476,8 +488,10 @@ body,
   width: 100%;
   height: 100%;
   border-radius: var(--radius);
-  background: var(--t2);
-  color: var(--ink);
+  /* Each tile class sets --c to its own colour; background and glow both read
+     from it, so a tile's hue lives in exactly one place. */
+  background: var(--c, var(--t2));
+  color: var(--tile-ink);
   font-size: calc(var(--cell) * 0.52);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -502,61 +516,70 @@ body,
 .tile.tile-position-4-3 { transform: translate(356.4706%, 242.3529%); }
 .tile.tile-position-4-4 { transform: translate(356.4706%, 356.4706%); }
 
-.tile-2 .tile-inner   { background: var(--t2); }
-.tile-4 .tile-inner   { background: var(--t4); }
-.tile-8 .tile-inner   { background: var(--t8); color: var(--ink-light); }
-.tile-16 .tile-inner  { background: var(--t16); color: var(--ink-light); }
-.tile-32 .tile-inner  { background: var(--t32); color: var(--ink-light); }
-.tile-64 .tile-inner  { background: var(--t64); color: var(--ink-light); }
+.tile-2 .tile-inner    { --c: var(--t2); }
+.tile-4 .tile-inner    { --c: var(--t4); }
+.tile-8 .tile-inner    { --c: var(--t8); }
+.tile-16 .tile-inner   { --c: var(--t16); }
+.tile-32 .tile-inner   { --c: var(--t32); }
+.tile-64 .tile-inner   { --c: var(--t64); }
+.tile-128 .tile-inner  { --c: var(--t128); }
+.tile-256 .tile-inner  { --c: var(--t256); }
+.tile-512 .tile-inner  { --c: var(--t512); }
+.tile-1024 .tile-inner { --c: var(--t1024); }
+.tile-2048 .tile-inner { --c: var(--t2048); }
 
+/* Numerals shrink as the digits multiply. */
+.tile-128 .tile-inner,
+.tile-256 .tile-inner,
+.tile-512 .tile-inner  { font-size: calc(var(--cell) * 0.42); }
+
+.tile-1024 .tile-inner,
+.tile-2048 .tile-inner { font-size: calc(var(--cell) * 0.34); }
+
+/* The bloom takes the tile's own colour rather than a fixed gold, so a green
+   256 glows green and the red 2048 glows red. It also strengthens up the ramp,
+   which is what made the original's high tiles feel like a reward. */
 .tile-128 .tile-inner {
-  background: var(--t128);
-  color: var(--ink-light);
-  font-size: calc(var(--cell) * 0.42);
-  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.238), inset 0 0 0 1px rgba(255, 255, 255, 0.143);
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 22%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
 .tile-256 .tile-inner {
-  background: var(--t256);
-  color: var(--ink-light);
-  font-size: calc(var(--cell) * 0.42);
-  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.317), inset 0 0 0 1px rgba(255, 255, 255, 0.19);
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 28%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.19);
 }
 
 .tile-512 .tile-inner {
-  background: var(--t512);
-  color: var(--ink-light);
-  font-size: calc(var(--cell) * 0.42);
-  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.397), inset 0 0 0 1px rgba(255, 255, 255, 0.238);
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 34%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 
 .tile-1024 .tile-inner {
-  background: var(--t1024);
-  color: var(--ink-light);
-  font-size: calc(var(--cell) * 0.34);
-  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.476), inset 0 0 0 1px rgba(255, 255, 255, 0.286);
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 40%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.29);
 }
 
 .tile-2048 .tile-inner {
-  background: var(--t2048);
-  color: var(--ink-light);
-  font-size: calc(var(--cell) * 0.34);
-  box-shadow: 0 0 30px 10px rgba(var(--glow), 0.556), inset 0 0 0 1px rgba(255, 255, 255, 0.333);
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 48%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.33);
 }
 
+/* Past 2048 the ramp has nowhere warmer to go, so the tile drops out of it
+   entirely — near-black, the one value the gradient never visits. */
 .tile-super .tile-inner {
-  background: var(--tsuper);
+  --c: var(--tsuper);
   color: var(--ink-light);
   font-size: calc(var(--cell) * 0.29);
 }
 
-/* The panel reports HDR headroom, so let the high tiles actually use it: the
-   gold bloom goes wider and hotter than an SDR screen could show. */
+/* The panel reports HDR headroom, so let the top of the ramp use it: the bloom
+   goes wider and hotter than an SDR screen could show. */
 @media (dynamic-range: high) {
   .tile-512 .tile-inner,
   .tile-1024 .tile-inner,
   .tile-2048 .tile-inner {
-    box-shadow: 0 0 44px 14px rgba(var(--glow), 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+    box-shadow: 0 0 44px 14px color-mix(in srgb, var(--c) 52%, transparent),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.34);
   }
 }
 
