@@ -135,6 +135,12 @@
   }
 }
 
+/* The leaderboard is injected only when a backend is configured, so its height
+   is reserved only when it is really there. */
+:root:has(.leaderboard) {
+  --chrome: 338px;
+}
+
 /* Wide gamut. The ramp is drawn at high chroma the whole way round, and the
    cyan-to-green stretch in particular sits well outside sRGB — these are the
    colours the ramp was actually solved for, with the hex values above as the
@@ -690,6 +696,148 @@ body,
   }
 }
 
+/* ---- leaderboard ----
+ * Injected by leaderboard.js, and only when a backend is configured, so the
+ * reserved chrome grows conditionally rather than leaving a hole when it is
+ * absent. */
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lb-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.lb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* When the table cannot be reached, the board shows this device's own numbers
+   rather than an error — dimmed, so it does not read as the shared state. */
+.lb-list[data-offline="true"] {
+  opacity: 0.55;
+}
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 1.2em 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  background: var(--cell-empty);
+  font-size: 14px;
+}
+
+.lb-row.is-me {
+  background: var(--board-bg);
+  color: var(--ink-light);
+}
+
+.lb-rank {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+.lb-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-you {
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* The player's best tile, in that tile's own colour — the ramp doing double
+   duty as a legend. */
+.lb-tile {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.14);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.lb-score {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* first run: name entry */
+
+.lb-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 5px;
+  background: var(--cell-empty);
+}
+
+.lb-setup label {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.lb-setup-row {
+  display: flex;
+  gap: 6px;
+}
+
+.lb-setup input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--rule, rgba(119, 110, 101, 0.3));
+  border-radius: 4px;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.lb-setup input:focus-visible {
+  outline: 2px solid var(--button);
+  outline-offset: 1px;
+}
+
+.lb-setup button {
+  flex: 0 0 auto;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--button);
+  color: var(--ink-light);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* ---- win / lose overlay ---- */
 
 .game-message {
@@ -851,7 +999,8 @@ body,
     gap: 8px;
   }
   .game-explanation,
-  .palette-switch {
+  .palette-switch,
+  .leaderboard {
     display: none;
   }
 }
@@ -1082,8 +1231,10 @@ KeyboardInputManager.prototype.emit = function (event, data) {
 };
 
 // A gesture starting on a control is that control's tap, not a board swipe.
+// Text fields count: the leaderboard's name entry lives on the same page.
 KeyboardInputManager.prototype.isControl = function (target) {
-  return !!(target && target.closest && target.closest("a, button"));
+  return !!(target && target.closest &&
+            target.closest("a, button, input, textarea, select"));
 };
 
 KeyboardInputManager.prototype.listen = function () {

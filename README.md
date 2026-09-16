@@ -196,6 +196,68 @@ criterion. The usual causes are a non-HTTPS origin, a service worker that failed
 to register, or a stale cached `manifest.webmanifest` — bump `CACHE` in
 `app/sw.js` and reload twice.
 
+## The leaderboard
+
+Two players, one shared table. It is deliberately the smallest thing that works:
+plain REST from the page, no SDK, no build step, no sign-in.
+
+It hides itself completely until configured, so the game is unaffected if you
+never set it up — and the single-file bundle in `dist/` excludes it outright,
+since that host blocks requests to third-party origins.
+
+### Setting it up
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the SQL editor, run:
+
+```sql
+create table public.scores (
+  player_id text primary key,
+  name      text    not null,
+  best      integer not null default 0,
+  games     integer not null default 0,
+  best_tile integer not null default 0
+);
+
+alter table public.scores enable row level security;
+
+-- The page talks to the table as the anonymous role. Upserting needs insert
+-- and update separately: PostgREST resolves a duplicate key by updating.
+create policy "read scores"   on public.scores for select to anon using (true);
+create policy "insert scores" on public.scores for insert to anon with check (true);
+create policy "update scores" on public.scores for update to anon using (true) with check (true);
+```
+
+3. In **Settings → API**, copy the project URL and the **anon / public** key —
+   not the service role key, which must never leave the server.
+4. Paste both into `app/js/leaderboard-config.js`.
+5. Bump `CACHE` in `app/sw.js`, then deploy:
+   `git push && git subtree push --prefix app origin gh-pages`.
+6. Open the site on both phones. Each device asks for a name once and keeps it.
+
+### What it records
+
+Each device mints a random id on first run and owns one row: name, best score,
+games finished, and highest tile reached. Scores post when a game ends and when
+a personal best is beaten, coalesced so a finished game is one write. If the
+network is down the row is kept in `localStorage` and flushed on the next
+successful contact, so the installed app still records scores in airplane mode.
+
+### What it does not do
+
+**It cannot prove who posted a score.** There is no sign-in: identity is a name
+typed on each device, and the anon key ships inside a page served from a public
+repo, so treat it as readable by anyone who looks. Anyone holding it can read
+the table and write any row in it. For two people and a 2048 score that is a
+reasonable trade, and it is why the table holds nothing but first names and
+numbers. It is *not* a trade you should extend to anything else — do not add a
+column you would mind a stranger reading or rewriting.
+
+If you ever want it to be real, the upgrade is Supabase Auth: both of you sign
+in with a magic link, and the policies become `auth.uid() = player_id` so each
+row can only be written by its owner. That is a bigger change than this is worth
+today.
+
 ## Rebuilding
 
 ```bash

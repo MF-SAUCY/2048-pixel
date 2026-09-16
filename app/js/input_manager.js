@@ -41,8 +41,10 @@ KeyboardInputManager.prototype.emit = function (event, data) {
 };
 
 // A gesture starting on a control is that control's tap, not a board swipe.
+// Text fields count: the leaderboard's name entry lives on the same page.
 KeyboardInputManager.prototype.isControl = function (target) {
-  return !!(target && target.closest && target.closest("a, button"));
+  return !!(target && target.closest &&
+            target.closest("a, button, input, textarea, select"));
 };
 
 KeyboardInputManager.prototype.listen = function () {

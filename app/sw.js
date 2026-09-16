@@ -7,7 +7,7 @@
  * Bump CACHE when any shell file changes — the old cache is dropped on activate.
  */
 
-var CACHE = "2048-pixel-v6";
+var CACHE = "2048-pixel-v7";
 
 var SHELL = [
   "./",
@@ -28,6 +28,8 @@ var SHELL = [
   "./js/game_manager.js",
   "./js/theme.js",
   "./js/palette.js",
+  "./js/leaderboard-config.js",
+  "./js/leaderboard.js",
   "./js/effects.js",
   "./js/application.js",
   "./icons/icon-192.png",
