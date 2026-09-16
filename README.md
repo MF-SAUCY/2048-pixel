@@ -90,26 +90,26 @@ origin, so the offline behaviour works here too.
 ## Installing it on the phone
 
 A service worker will not register over plain HTTP, so the files have to be on
-HTTPS before the Pixel will install anything. GitHub Pages is the shortest route.
+HTTPS before the Pixel will install anything. This repo is already deployed:
 
-Create an empty repo on GitHub — **public**, since Pages on a free account will
-not serve a private one — then, from this directory:
+**https://mf-saucy.github.io/2048-pixel/**
+
+It is served from the root of the `gh-pages` branch, which holds the contents of
+`app/` and nothing else. GitHub enabled Pages by itself the moment that branch
+appeared, so there was no Settings step.
+
+To ship a change, commit it on `main` and then republish the subtree:
 
 ```bash
-git remote add origin https://github.com/<you>/2048-pixel.git
-git push -u origin main
+git push
 git subtree push --prefix app origin gh-pages
 ```
 
-The third command publishes the contents of `app/` to the root of a `gh-pages`
-branch, which is what keeps the site URL clean while leaving this repo's layout
-alone. Re-run that same command after any change.
+That second command is the deploy. It keeps the site URL clean while leaving this
+repo's layout alone. Bump `CACHE` in `app/sw.js` first if you touched a shell
+file, or already-installed copies will keep serving the old one.
 
-In the repo's **Settings → Pages**, set the source to the `gh-pages` branch,
-folder `/ (root)`. The site appears at
-`https://<you>.github.io/2048-pixel/` within a minute or two.
-
-Open that on the Pixel in Chrome and use **⋮ → Add to Home screen** (Chrome may
+Open the site on the Pixel in Chrome and use **⋮ → Add to Home screen** (Chrome may
 offer *Install app* instead — same thing). Because the manifest, the icons and a
 service worker with a fetch handler are all present, Chrome mints a **WebAPK**: a
 real signed Android package, with its own entry in the app drawer, its own task in
