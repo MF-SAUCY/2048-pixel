@@ -40,6 +40,12 @@ the game and dismissed the message in a single tap. This build binds `click`
 only. The swipe threshold also went from 10px to 20px, so a slightly smudged tap
 is no longer read as a move.
 
+**New Game asks twice.** One tap turns the button into an outlined "Tap again"
+for three seconds; only a second tap inside that window restarts. There is no
+dialog: letting it lapse or swiping cancels it. It skips the question when there
+is nothing to lose — after game over, or before the first point — and the
+overlay's "Try again" never asks. The R key follows the same rule.
+
 **A cool-to-warm tile ramp.** Upstream's five gold tiles (128→2048) vary almost
 nothing but the blue channel, so they land within 3.3 points of lightness and the
 closest pair measures **ΔE2000 2.18** — barely twice the smallest difference a
