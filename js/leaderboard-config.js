@@ -12,6 +12,6 @@
  */
 
 window.LEADERBOARD_CONFIG = {
-  url: "",      // e.g. https://abcdefghijklm.supabase.co
-  anonKey: "",  // the "anon / public" key, not the service role key
+  url: "https://cueswzyoejwirzjpsccw.supabase.co",
+  anonKey: "sb_publishable_hMQ_LrSisTNdRYPaOMaqpQ_hOpR_zlD", // the publishable (sb_publishable_…) or legacy anon key; never a secret key
 };

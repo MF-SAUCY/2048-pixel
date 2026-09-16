@@ -7,7 +7,7 @@
  * Bump CACHE when any shell file changes — the old cache is dropped on activate.
  */
 
-var CACHE = "2048-pixel-v7";
+var CACHE = "2048-pixel-v8";
 
 var SHELL = [
   "./",
