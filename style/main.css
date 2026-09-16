@@ -96,15 +96,17 @@
   --tsuper: #3c3a32;
 
   /* One ink for every tile. Upstream switched from dark to light text partway
-     up the ramp. With lightness moving the way it does here there is no single
-     switch point that works, and this near-black clears 5.43:1 against the
-     worst tile on the ramp — past even the 4.5:1 normal-text bar. */
+     up the ramp, which puts nine of its twelve tiles under the 3:1 that large
+     bold text has to meet — as low as 1.42:1 on the 128. With lightness moving
+     the way it does here there is no single switch point that works anyway, and
+     this near-black clears 5.43:1 against the worst tile on the ramp, past even
+     the 4.5:1 normal-text bar. */
   --tile-ink: #241f1a;
 
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
      worth more than the margin. */
   --gutter: 12px;
-  --chrome: 200px; /* heading + controls + footer + padding */
+  --chrome: 236px; /* heading + controls + footer + palette switch + padding */
   --board-cap: 560px;
 
   --avail-h: calc(100vh - var(--chrome));
@@ -149,6 +151,68 @@
     --t1024: color(display-p3 0.926 0.548 0.108);
     --t2048: color(display-p3 1.000 0.345 0.190);
   }
+}
+
+/* ---- original palette ----
+ *
+ * Gabriele Cirulli's exact sRGB values, offered as a switch. Deliberately not
+ * extended into display-p3 the way the custom ramp is: "Original" should mean
+ * the colours upstream actually ships, not an enhanced version of them.
+ *
+ * The ink reverts too. Upstream runs dark text on the two pale tiles and white
+ * from 8 upward — the split the custom ramp does without. It is also where
+ * upstream's legibility goes: nine of its twelve tiles put text under 3:1, the
+ * floor being 1.42:1 on the 128. Faithful, and worth seeing next to the other
+ * option.
+ *
+ * One thing is not reverted: the 2 and 4 tiles are still darkened for night
+ * play. At #eee4da they are near-white, and sixteen of them on a near-black
+ * ground is genuinely unpleasant. Upstream has no dark theme at all, so there
+ * is no original behaviour to be faithful to here.
+ */
+:root[data-palette="original"] {
+  --t2: #eee4da;
+  --t4: #ede0c8;
+  --t8: #f2b179;
+  --t16: #f59563;
+  --t32: #f67c5f;
+  --t64: #f65e3b;
+  --t128: #edcf72;
+  --t256: #edcc61;
+  --t512: #edc850;
+  --t1024: #edc53f;
+  --t2048: #edc22e;
+  --tile-ink: #776e65;
+}
+
+:root[data-palette="original"] .tile-8 .tile-inner,
+:root[data-palette="original"] .tile-16 .tile-inner,
+:root[data-palette="original"] .tile-32 .tile-inner,
+:root[data-palette="original"] .tile-64 .tile-inner,
+:root[data-palette="original"] .tile-128 .tile-inner,
+:root[data-palette="original"] .tile-256 .tile-inner,
+:root[data-palette="original"] .tile-512 .tile-inner,
+:root[data-palette="original"] .tile-1024 .tile-inner,
+:root[data-palette="original"] .tile-2048 .tile-inner {
+  color: var(--ink-light);
+}
+
+/* Darkening the two pale tiles for night also has to move the ink that sits on
+   them. Upstream's #776e65 was chosen against near-white; on the darkened tile
+   it lands at 2.01:1, which is unreadable. The tiles from 8 up keep upstream's
+   white, since those colours are unchanged. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-palette="original"] {
+    --t2: #4a4137;
+    --t4: #5c5044;
+    --tile-ink: var(--d-ink);
+  }
+}
+
+:root[data-theme="dark"][data-palette="original"] {
+  --t2: #4a4137;
+  --t4: #5c5044;
+  --tile-ink: var(--d-ink);
 }
 
 /* ---- night palette ----
@@ -714,6 +778,52 @@ body,
   font-weight: 700;
 }
 
+/* The palette switch sits under the footer text — a preference, not a move. */
+.palette-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.palette-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.palette-switch .seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--cell-empty);
+}
+
+.palette-switch .seg button {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.palette-switch .seg button[aria-pressed="true"] {
+  background: var(--board-bg);
+  color: var(--ink-light);
+}
+
+.palette-switch .seg button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 /* The arrow-key hint is noise on a touchscreen and the swipe hint is noise on a
    desktop; show whichever matches the pointer. */
 .hint-touch {
@@ -737,7 +847,8 @@ body,
   .container {
     gap: 8px;
   }
-  .game-explanation {
+  .game-explanation,
+  .palette-switch {
     display: none;
   }
 }
