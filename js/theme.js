@@ -57,11 +57,19 @@
       root.removeAttribute("data-theme");
     }
 
-    // Colours the Android status and navigation bars to match the board.
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      meta.setAttribute("content",
-        effective() === "dark" ? DARK_GROUND : LIGHT_GROUND);
+    // Colours the browser UI to match the board. There are two of these tags,
+    // scoped to prefers-color-scheme; writing the effective colour into both
+    // makes whichever one currently matches the right one, so an explicit
+    // choice beats the media queries without any tags being added or removed.
+    //
+    // This has no effect inside an installed WebAPK: that status bar colour is
+    // baked from the manifest at install time and does not repaint at runtime
+    // (crbug.com/40634649). The manifest asks for fullscreen so there is no
+    // status bar there to mismatch.
+    var color = effective() === "dark" ? DARK_GROUND : LIGHT_GROUND;
+    var metas = document.querySelectorAll('meta[name="theme-color"]');
+    for (var i = 0; i < metas.length; i++) {
+      metas[i].setAttribute("content", color);
     }
   }
 

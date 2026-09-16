@@ -8,10 +8,14 @@
   <!-- viewport-fit=cover lets the page run under the notch; the safe-area
        insets below keep the content clear of it. -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <!-- Kept as a single tag with no media query: theme.js rewrites it, because an
-       explicit choice has to beat the system setting here too, and the Android
-       status bar reads whatever this says. -->
-  <meta name="theme-color" content="#faf8ef">
+  <!-- Two media-scoped values, so a browser tab gets the right one before any JS
+       runs. An installed WebAPK ignores both: it bakes its status bar colour from
+       the manifest at install time and will not repaint on a runtime change
+       (crbug.com/40634649). A single manifest colour cannot match both a cream
+       and a near-black ground, which is why the manifest asks for fullscreen and
+       does away with the status bar instead. -->
+  <meta name="theme-color" content="#faf8ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
 
   <script>
@@ -20,10 +24,11 @@
       var t = localStorage.getItem("2048-theme");
       if (t === "light" || t === "dark") {
         document.documentElement.setAttribute("data-theme", t);
-        // The meta above is already parsed, so this updates it rather than
-        // adding a second one for theme.js to disagree with.
-        document.querySelector('meta[name="theme-color"]')
-          .setAttribute("content", t === "dark" ? "#14110e" : "#faf8ef");
+        // An explicit choice has to beat the media queries above. Writing the
+        // same colour into both tags makes whichever one matches the right one.
+        var c = t === "dark" ? "#14110e" : "#faf8ef";
+        var m = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < m.length; i++) m[i].setAttribute("content", c);
       }
     } catch (e) {}
   </script>
