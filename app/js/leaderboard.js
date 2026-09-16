@@ -78,10 +78,12 @@
   }
 
   function headers(extra) {
-    var h = {
-      apikey: config.anonKey,
-      Authorization: "Bearer " + config.anonKey
-    };
+    var h = { apikey: config.anonKey };
+    // A legacy anon key is a JWT and doubles as the bearer token. The newer
+    // sb_publishable_ keys are not JWTs and belong in apikey alone.
+    if (/^eyJ/.test(config.anonKey)) {
+      h.Authorization = "Bearer " + config.anonKey;
+    }
     for (var k in extra) if (extra.hasOwnProperty(k)) h[k] = extra[k];
     return h;
   }

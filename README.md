@@ -226,10 +226,15 @@ alter table public.scores enable row level security;
 create policy "read scores"   on public.scores for select to anon using (true);
 create policy "insert scores" on public.scores for insert to anon with check (true);
 create policy "update scores" on public.scores for update to anon using (true) with check (true);
+
+-- Projects created with "automatically expose new tables" off need this too;
+-- on other projects it is a harmless no-op.
+grant select, insert, update on public.scores to anon;
 ```
 
-3. In **Settings → API**, copy the project URL and the **anon / public** key —
-   not the service role key, which must never leave the server.
+3. From **Project Settings**, copy the project URL and the **publishable** key
+   (`sb_publishable_…`), or on older projects the legacy **anon / public** key.
+   Never use the secret or service role key, which must never leave the server.
 4. Paste both into `app/js/leaderboard-config.js`.
 5. Bump `CACHE` in `app/sw.js`, then deploy:
    `git push && git subtree push --prefix app origin gh-pages`.
