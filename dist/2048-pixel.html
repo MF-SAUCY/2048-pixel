@@ -68,21 +68,27 @@
 
   /* Tile ramp, sRGB fallback. The P3 block below restates all of it.
    *
-   * A temperature gradient: cool blue at 2, warming through cyan, teal, green
-   * and gold, landing on the hot red-orange at 2048. Generated in CIE LCh by
-   * tools/make_gradient.py rather than picked by hand, because the thing that
-   * matters is that neighbours stay apart — every adjacent pair is at or above
-   * dE2000 10.49, where the gold run it replaces bottomed out at 2.18.
+   * A temperature gradient: orchid at 2, cooling through periwinkle and blue to
+   * cyan, then warming through green, chartreuse and gold to the hot red-orange
+   * at 2048.
    *
-   * Lightness arcs rather than descends: it climbs from the blue end through
-   * the yellow-greens, which is where those hues naturally sit, then falls to
-   * the terminal red. That gives every pair a lightness step to go with the hue
-   * step, in both halves of the ramp.
+   * Spliced from two solves by tools/make_gradient.py rather than one. The low
+   * end (2-16) comes from a run with a hard lightness climb, which is what the
+   * blues need — cyan is perceptually compressed, so rotating hue through it
+   * buys far less separation than the same rotation through greens or golds,
+   * and those tiles need lightness to tell them apart. The high end (32-2048)
+   * comes from a gentler run, whose shallower approach to the terminal red
+   * avoids the ΔE 32 cliff the steeper one left between 1024 and 2048.
+   *
+   * The result beats either source ramp: worst adjacent pair ΔE 12.07, worst
+   * step 2->4 down to 14.06, and no two tiles anywhere on the board — adjacent
+   * on the ramp or not — closer than ΔE 12. Upstream's gold run bottomed out at
+   * 2.18. Re-measure with tools/check_ramp.py.
    */
-  --t2: #6f91cf;
-  --t4: #18abef;
-  --t8: #00bee7;
-  --t16: #00ccda;
+  --t2: #daaddc;
+  --t4: #bebbff;
+  --t8: #95d1ff;
+  --t16: #39e7ff;
   --t32: #00d5c3;
   --t64: #00db97;
   --t128: #63d754;
@@ -93,8 +99,9 @@
   --tsuper: #3c3a32;
 
   /* One ink for every tile. Upstream switched from dark to light text partway
-     up the ramp; with lightness arcing, no single switch point works, and this
-     near-black clears 5.15:1 against the worst tile on the ramp. */
+     up the ramp. With lightness moving the way it does here there is no single
+     switch point that works, and this near-black clears 5.43:1 against the
+     worst tile on the ramp — past even the 4.5:1 normal-text bar. */
   --tile-ink: #241f1a;
 
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
@@ -133,10 +140,10 @@
    game's identity and gain nothing from the extra gamut. */
 @supports (color: color(display-p3 1 1 1)) {
   :root {
-    --t2: color(display-p3 0.464 0.564 0.793);
-    --t4: color(display-p3 0.314 0.663 0.914);
-    --t8: color(display-p3 0.000 0.745 0.942);
-    --t16: color(display-p3 0.000 0.803 0.881);
+    --t2: color(display-p3 0.826 0.685 0.852);
+    --t4: color(display-p3 0.739 0.732 1.000);
+    --t8: color(display-p3 0.617 0.816 1.000);
+    --t16: color(display-p3 0.405 0.899 1.000);
     --t32: color(display-p3 0.000 0.845 0.771);
     --t64: color(display-p3 0.321 0.856 0.593);
     --t128: color(display-p3 0.510 0.835 0.400);

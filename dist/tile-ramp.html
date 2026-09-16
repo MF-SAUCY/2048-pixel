@@ -199,7 +199,7 @@
     min-height: 3.9em;
   }
 
-  .col.was > .verdict { color: var(--flag); }
+  .col.was > .verdict { color: var(--ink); }
   .col.now > .verdict { color: var(--good); }
 
   .stack { padding: 7px; border-radius: 8px; background: var(--board); }
@@ -301,12 +301,16 @@
 
   <dl class="headline">
     <div class="stat">
-      <dt>Closest pair</dt>
-      <dd><s>ΔE 2.18</s> → <em>ΔE 10.49</em></dd>
+      <dt>Step 2 → 4</dt>
+      <dd><s>ΔE 36.72</s> → <em>ΔE 14.06</em></dd>
     </div>
     <div class="stat">
-      <dt>Worst text contrast</dt>
-      <dd><s>2.79:1</s> → <em>5.15:1</em></dd>
+      <dt>Blues, 4 → 32</dt>
+      <dd><s>ΔE 10.49</s> → <em>ΔE 11.40</em></dd>
+    </div>
+    <div class="stat">
+      <dt>Palest tile</dt>
+      <dd><em>L* 85.4</em></dd>
     </div>
   </dl>
 
@@ -320,62 +324,50 @@
 
   <div class="cols">
     <div class="col was">
-      <h2>Was</h2>
-      <p class="verdict">Four gold steps under ΔE 3 — five tiles that are
-        effectively one colour. Orange tiles carried white text at 2.8:1.</p>
+      <h2>Live now</h2>
+      <p class="verdict">Starts on blue. The 4-through-32 run is the flattest
+        stretch left, bottoming out at ΔE 10.49.</p>
       <div class="stack" id="stack-was"></div>
     </div>
     <div class="col now">
-      <h2>Now</h2>
-      <p class="verdict">Cool to warm, ending on the old 64. Every adjacent pair
-        clears ΔE 10, and one near-black ink reads on all of them.</p>
+      <h2>Proposed</h2>
+      <p class="verdict">Opens on orchid, no jump at 2→4, and the blues carry a
+        steady lightness climb instead of hue alone.</p>
       <div class="stack" id="stack-now"></div>
     </div>
   </div>
 
   <div class="note">
-    <p><b>Why the old golds collided.</b> Upstream varied almost nothing but the
-      blue channel across 128→2048, so all five landed within 3.3 points of
-      lightness. Lightness is what the eye separates first; hold it constant and
-      the tiles become interchangeable at a glance.</p>
-    <p><b>How the new ramp is drawn.</b> Hue rotates 278°→43°, cool to warm.
-      Chroma climbs the whole way so the ramp intensifies rather than merely
-      rotating. Lightness <em>arcs</em> — up through the yellow-greens, where
-      those hues naturally sit, then down to the terminal red — which gives
-      every pair a lightness step to go with the hue step in both halves. It is
-      solved in CIE LCh by <code>tools/make_gradient.py</code>, not picked by
-      hand, and the search maximises the worst adjacent pair subject to a
-      contrast floor.</p>
-    <p><b>One ink, not two.</b> Upstream switched from dark text to white
-      partway up. With lightness arcing there is no single switch point that
-      works, so every tile takes the same near-black <code>#241f1a</code>. Worst
-      case on the ramp is 5.15:1, which clears the 4.5:1 normal-text bar, never
-      mind the 3:1 that large bold numerals actually have to meet.</p>
-    <p><b>Past 2048</b> the ramp has nowhere warmer to go, so that tile drops out
-      of it entirely — near-black, the one value the gradient never visits.
-      Switch the board to <b>Night</b> to see it against the dark ground.</p>
+    <p><b>What the spacing is doing now.</b> The stops are no longer sampled at
+      even intervals of a curve — that is what produced the ΔE 36.7 jump at 2→4
+      and the flat blues. A dense path is drawn through LCh, then eleven stops
+      are placed on it by binary search for the largest distance at which all
+      eleven still fit, and nudged afterwards to even out what slack remains.</p>
+    <p><b>The blues needed lightness, not hue.</b> Cyan is perceptually
+      compressed: rotating hue through it buys far less separation than the same
+      rotation through greens or golds. The old lightness curve flattened as it
+      approached its peak, parking four tiles inside three points of lightness
+      right in that stretch, so they had nothing left to separate them.
+      Lightness now runs in two straight segments and never flattens, which is
+      what lifts 4→8 and 8→16 to ΔE 16.7 and 15.2.</p>
+    <p><b>Two honest limits.</b> 16→32 and 32→64 sit at ΔE 11.4 — the cyan
+      compression is a real ceiling, not something more search will fix. And
+      1024→2048 is ΔE 32: the terminal red is pinned and sits well below the
+      rest of the ramp in lightness, so the last step is always going to be a
+      long one. Both are at points where you rarely hold the two tiles side by
+      side, which is why I left them.</p>
+    <p><b>Nothing is near-white.</b> The solver reaches for pale colours every
+      time it is allowed to, because they buy separation cheaply — an earlier
+      pass put 32 at L* 94, practically white. Tiles are now capped at L* 88, so
+      the palest is 85.4. That costs a little separation and keeps every tile a
+      colour rather than a highlight, on both grounds.</p>
     <p>Measured in CIE Lab from the display-p3 values, which is what the Pixel
-      actually shows.</p>
+      actually shows. Solver: <code>tools/make_gradient.py</code>.</p>
   </div>
 </div>
 
 <script>
   var WAS = [
-    {v:"2",    d:{day:"#eee4da", night:"#4a4137"}, L:91.1, dE:null,  ink:"dark"},
-    {v:"4",    d:{day:"#ede0c8", night:"#5c5044"}, L:89.6, dE:5.57,  ink:"dark"},
-    {v:"8",    c:"color(display-p3 0.960 0.695 0.455)", L:77.7, dE:19.98},
-    {v:"16",   c:"color(display-p3 0.985 0.575 0.355)", L:71.6, dE:10.28},
-    {v:"32",   c:"color(display-p3 1 0.470 0.340)",     L:67.0, dE:9.35},
-    {v:"64",   c:"color(display-p3 1 0.345 0.190)",     L:61.6, dE:6.87},
-    {v:"128",  c:"color(display-p3 0.940 0.815 0.420)", L:84.3, dE:40.48, glow:1},
-    {v:"256",  c:"color(display-p3 0.945 0.800 0.345)", L:83.3, dE:2.75,  glow:1},
-    {v:"512",  c:"color(display-p3 0.950 0.785 0.270)", L:82.3, dE:2.51,  glow:1},
-    {v:"1024", c:"color(display-p3 0.955 0.772 0.190)", L:81.5, dE:2.30,  glow:1},
-    {v:"2048", c:"color(display-p3 0.965 0.760 0.100)", L:81.0, dE:2.18,  glow:1},
-    {v:"4096", d:{day:"#3c3a32", night:"#0d0b09"},      L:24.4, dE:62.48}
-  ];
-
-  var NOW = [
     {v:"2",    c:"color(display-p3 0.464 0.564 0.793)", L:60.0, dE:null,  ink:"tile"},
     {v:"4",    c:"color(display-p3 0.314 0.663 0.914)", L:66.3, dE:14.79, ink:"tile"},
     {v:"8",    c:"color(display-p3 0.000 0.745 0.942)", L:71.2, dE:10.49, ink:"tile"},
@@ -387,6 +379,21 @@
     {v:"512",  c:"color(display-p3 0.808 0.687 0.112)", L:72.2, dE:18.14, ink:"tile", glow:1},
     {v:"1024", c:"color(display-p3 0.926 0.548 0.108)", L:67.6, dE:21.28, ink:"tile", glow:1},
     {v:"2048", c:"color(display-p3 1.000 0.345 0.190)", L:61.6, dE:21.43, ink:"tile", glow:1},
+    {v:"4096", d:{day:"#3c3a32", night:"#0d0b09"},      L:24.4, dE:46.74}
+  ];
+
+  var NOW = [
+    {v:"2",    c:"color(display-p3 0.826 0.685 0.852)", L:76.0, dE:null,  ink:"tile"},
+    {v:"4",    c:"color(display-p3 0.739 0.732 1.000)", L:78.3, dE:14.06, ink:"tile"},
+    {v:"8",    c:"color(display-p3 0.617 0.816 1.000)", L:81.5, dE:16.68, ink:"tile"},
+    {v:"16",   c:"color(display-p3 0.405 0.899 1.000)", L:84.7, dE:15.20, ink:"tile"},
+    {v:"32",   c:"color(display-p3 0.000 0.939 0.936)", L:85.4, dE:11.40, ink:"tile"},
+    {v:"64",   c:"color(display-p3 0.158 0.914 0.762)", L:82.5, dE:11.41, ink:"tile"},
+    {v:"128",  c:"color(display-p3 0.496 0.824 0.375)", L:76.3, dE:20.86, ink:"tile", glow:1},
+    {v:"256",  c:"color(display-p3 0.672 0.727 0.147)", L:71.7, dE:17.96, ink:"tile", glow:1},
+    {v:"512",  c:"color(display-p3 0.754 0.667 0.073)", L:69.4, dE:11.29, ink:"tile", glow:1},
+    {v:"1024", c:"color(display-p3 0.834 0.596 0.051)", L:67.2, dE:12.59, ink:"tile", glow:1},
+    {v:"2048", c:"color(display-p3 1.000 0.345 0.190)", L:61.6, dE:32.02, ink:"tile", glow:1},
     {v:"4096", d:{day:"#3c3a32", night:"#0d0b09"},      L:24.4, dE:46.74}
   ];
 
