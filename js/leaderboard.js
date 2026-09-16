@@ -147,7 +147,8 @@
   }
 
   function sync() {
-    if (!configured || !playerId) return;
+    // No row until a name is saved; saving the name triggers the first sync.
+    if (!configured || !playerId || !playerName) return;
     queue(currentRow());
     flush().then(refresh, refresh);
   }
