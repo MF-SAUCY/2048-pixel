@@ -61,10 +61,20 @@ and board are untouched; they carry the game's identity and gain nothing from
 the extra gamut.
 
 **One ink for every tile.** Upstream switches from dark text to white partway up
-the ramp and manages only about **2.8:1** on its orange tiles, below the 3:1 that
-large bold text has to meet. With lightness arcing there is no single switch
-point, so every tile takes the same near-black `#241f1a`; the worst case on the
-ramp is **5.15:1**, which clears even the stricter 4.5:1 normal-text bar.
+the ramp, and that switch is where its legibility goes: **nine of its twelve
+tiles** put text under the 3:1 that large bold text has to meet, bottoming out at
+**1.42:1** on the 128. With lightness moving the way it does here there is no
+single switch point that works anyway, so every tile takes the same near-black
+`#241f1a`; the worst case on the ramp is **5.43:1**, clearing even the stricter
+4.5:1 normal-text bar.
+
+**A palette switch.** The footer carries a Custom / Original toggle, so the
+upstream ramp is one tap away for comparison. Original is faithful — the same
+hex values, the same dark-then-white ink split, and no display-p3 extension,
+since "Original" should mean what upstream ships rather than an improved version
+of it. The one exception is night: the 2 and 4 tiles are still darkened, and
+their ink lightened with them, because upstream has no dark theme to be faithful
+to and sixteen near-white tiles on a near-black ground is unpleasant.
 
 Each tile class sets one custom property, `--c`. Background and glow both read
 from it, so a tile's hue lives in exactly one place — and the bloom on the high

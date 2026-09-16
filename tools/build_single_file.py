@@ -30,6 +30,7 @@ SCRIPTS = [
     "js/tile.js",
     "js/local_storage_manager.js",
     "js/game_manager.js",
+    "js/palette.js",
     "js/effects.js",
     "js/application.js",
 ]

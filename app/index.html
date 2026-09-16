@@ -21,6 +21,9 @@
   <script>
     // Applied before first paint so a stored night theme does not flash cream.
     try {
+      if (localStorage.getItem("2048-palette") === "original") {
+        document.documentElement.setAttribute("data-palette", "original");
+      }
       var t = localStorage.getItem("2048-theme");
       if (t === "light" || t === "dark") {
         document.documentElement.setAttribute("data-theme", t);
@@ -119,6 +122,7 @@
   <script src="js/local_storage_manager.js"></script>
   <script src="js/game_manager.js"></script>
   <script src="js/theme.js"></script>
+  <script src="js/palette.js"></script>
   <script src="js/effects.js"></script>
   <script src="js/application.js"></script>
   <script>
