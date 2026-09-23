@@ -26,6 +26,9 @@
   var ID_KEY = "2048-player-id";
   var NAME_KEY = "2048-player-name";
   var PENDING_KEY = "2048-pending-score";
+  var WINS_2048_KEY = "2048-wins-2048";
+  var WINS_4096_KEY = "2048-wins-4096";
+  var GAME_TOP_KEY = "2048-game-top";
   var REFRESH_MS = 60000;
 
   var config = window.LEADERBOARD_CONFIG || {};
@@ -35,7 +38,7 @@
   var playerName = null;
   var panel = null;
   var listEl = null;
-  var mine = { best: 0, games: 0, bestTile: 0 };
+  var mine = { best: 0, games: 0, bestTile: 0, wins2048: 0, wins4096: 0 };
   var writeTimer = null;
   var refreshTimer = null;
 
@@ -89,7 +92,8 @@
   }
 
   function fetchBoard() {
-    return fetch(endpoint("scores?select=player_id,name,best,games,best_tile" +
+    return fetch(endpoint("scores?select=player_id,name,best,games,best_tile," +
+                          "wins_2048,wins_4096" +
                           "&order=best.desc&limit=20"), {
       headers: headers({ Accept: "application/json" }),
       cache: "no-store"
@@ -121,7 +125,9 @@
       name: playerName || "Player",
       best: mine.best,
       games: mine.games,
-      best_tile: mine.bestTile
+      best_tile: mine.bestTile,
+      wins_2048: mine.wins2048,
+      wins_4096: mine.wins4096
     };
   }
 
@@ -179,6 +185,33 @@
     });
   }
 
+  // Every field only ever goes up, so where the table is ahead of this device
+  // (a count set by hand in the dashboard, say) take the table's number rather
+  // than overwriting it with a smaller one on the next write.
+  function adopt(row) {
+    mine.best = Math.max(mine.best, row.best || 0);
+    mine.games = Math.max(mine.games, row.games || 0);
+    mine.bestTile = Math.max(mine.bestTile, row.best_tile || 0);
+    mine.wins2048 = Math.max(mine.wins2048, row.wins_2048 || 0);
+    mine.wins4096 = Math.max(mine.wins4096, row.wins_4096 || 0);
+    saveCounts();
+  }
+
+  function saveCounts() {
+    write("2048-games", String(mine.games));
+    write("2048-best-tile", String(mine.bestTile));
+    write(WINS_2048_KEY, String(mine.wins2048));
+    write(WINS_4096_KEY, String(mine.wins4096));
+  }
+
+  // A count of games that reached this tile, drawn as a chip in the tile's own
+  // colour once there is at least one.
+  function countCell(n, tile) {
+    n = n || 0;
+    return '<span class="lb-count' + (n ? " is-set" : "") +
+           '" data-tile="' + tile + '">' + n + "</span>";
+  }
+
   function render(rows) {
     if (!listEl) return;
 
@@ -198,6 +231,7 @@
       rows = rows.map(function (r) {
         if (r.player_id === playerId) {
           seen = true;
+          adopt(r);
           return currentRow();
         }
         return r;
@@ -206,12 +240,18 @@
       rows.sort(function (a, b) { return (b.best || 0) - (a.best || 0); });
     }
 
-    listEl.innerHTML = rows.map(function (r, i) {
+    var head = '<li class="lb-head" aria-hidden="true"><span></span><span></span>' +
+               "<span>2048</span><span>4096</span><span>Top</span>" +
+               "<span>Best</span></li>";
+
+    listEl.innerHTML = head + rows.map(function (r, i) {
       var isMine = r.player_id === playerId;
       return '<li class="lb-row' + (isMine ? " is-me" : "") + '">' +
              '<span class="lb-rank">' + (i + 1) + "</span>" +
              '<span class="lb-name">' + esc(r.name || "Player") +
                (isMine ? ' <span class="lb-you">you</span>' : "") + "</span>" +
+             countCell(r.wins_2048, 2048) +
+             countCell(r.wins_4096, 4096) +
              '<span class="lb-tile">' + (r.best_tile || "—") + "</span>" +
              '<span class="lb-score">' + (r.best || 0).toLocaleString() +
              "</span></li>";
@@ -281,6 +321,8 @@
 
     var actuate = HTMLActuator.prototype.actuate;
     var lastScore = 0;
+    var raw = read(GAME_TOP_KEY);
+    var gameTop = raw === null ? null : (parseInt(raw, 10) || 0);
 
     HTMLActuator.prototype.actuate = function (grid, metadata) {
       actuate.call(this, grid, metadata);
@@ -299,13 +341,35 @@
       // A finished game is the only thing that increments the count.
       if (metadata.terminated && metadata.over && metadata.score !== lastScore) {
         mine.games += 1;
-        write("2048-games", String(mine.games));
         changed = true;
       }
       lastScore = metadata.score;
 
+      // Tiles never shrink within a game, so a lower top tile than last time
+      // means a new game began. The first time this runs there is no record,
+      // and a game already in progress is taken as-is rather than counted, so
+      // a 2048 already on the board is not credited as a fresh one.
+      var prev = gameTop;
+      if (prev === null) {
+        prev = top;
+      } else if (top < prev) {
+        prev = 0;
+      }
+      if (top >= 2048 && prev < 2048) {
+        mine.wins2048 += 1;
+        changed = true;
+      }
+      if (top >= 4096 && prev < 4096) {
+        mine.wins4096 += 1;
+        changed = true;
+      }
+      if (top !== gameTop) {
+        gameTop = top;
+        write(GAME_TOP_KEY, String(gameTop));
+      }
+
       if (changed) {
-        write("2048-best-tile", String(mine.bestTile));
+        saveCounts();
         syncSoon();
       }
     };
@@ -323,6 +387,8 @@
     mine.best = parseInt(read("bestScore") || "0", 10) || 0;
     mine.games = parseInt(read("2048-games") || "0", 10) || 0;
     mine.bestTile = parseInt(read("2048-best-tile") || "0", 10) || 0;
+    mine.wins2048 = parseInt(read(WINS_2048_KEY) || "0", 10) || 0;
+    mine.wins4096 = parseInt(read(WINS_4096_KEY) || "0", 10) || 0;
 
     if (!build()) return;
     hook();
