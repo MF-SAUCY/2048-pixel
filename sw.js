@@ -5,9 +5,19 @@
  * once installed, the game works in a tunnel, on a plane, in airplane mode.
  *
  * Bump CACHE when any shell file changes — the old cache is dropped on activate.
+ *
+ * Two exceptions to cache-first, both about staleness:
+ *
+ *   Precaching bypasses the HTTP cache. GitHub Pages sends max-age=600, so a
+ *   plain fetch during install can hand back a file from before the deploy
+ *   and freeze it into the new version's cache.
+ *
+ *   The manifest is network-first. Chrome reads it through this worker when it
+ *   installs or updates the app, and a cached copy once installed the app with
+ *   the previous display mode. Offline, the cached copy still answers.
  */
 
-var CACHE = "2048-pixel-v17";
+var CACHE = "2048-pixel-v18";
 
 var SHELL = [
   "./",
@@ -42,7 +52,9 @@ var SHELL = [
 self.addEventListener("install", function (event) {
   event.waitUntil(
     caches.open(CACHE).then(function (cache) {
-      return cache.addAll(SHELL);
+      return cache.addAll(SHELL.map(function (url) {
+        return new Request(url, { cache: "reload" });
+      }));
     }).then(function () {
       return self.skipWaiting();
     })
@@ -63,6 +75,23 @@ self.addEventListener("activate", function (event) {
 
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
+
+  if (new URL(event.request.url).pathname.endsWith("/manifest.webmanifest")) {
+    event.respondWith(
+      fetch(event.request, { cache: "no-cache" }).then(function (response) {
+        if (response && response.ok) {
+          var copy = response.clone();
+          caches.open(CACHE).then(function (cache) {
+            cache.put(event.request, copy);
+          });
+        }
+        return response;
+      }).catch(function () {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then(function (hit) {
