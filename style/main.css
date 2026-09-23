@@ -715,6 +715,32 @@ body,
   }
 }
 
+/* ---- back-gesture note ----
+ * Shown by back_guard.js when a back swipe was absorbed. Ink on ground,
+ * inverted, so it reads in both themes without a new colour. */
+.back-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+  z-index: 10;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--ground);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity 180ms ease, transform 180ms var(--slide-ease);
+}
+
+.back-toast.is-shown {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 /* ---- leaderboard ----
  * Injected by leaderboard.js, and only when a backend is configured, so the
  * reserved chrome grows conditionally rather than leaving a hole when it is
