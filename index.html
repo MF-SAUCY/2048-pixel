@@ -11,9 +11,9 @@
   <!-- Two media-scoped values, so a browser tab gets the right one before any JS
        runs. An installed WebAPK ignores both: it bakes its status bar colour from
        the manifest at install time and will not repaint on a runtime change
-       (crbug.com/40634649). A single manifest colour cannot match both a cream
-       and a near-black ground, which is why the manifest asks for fullscreen and
-       does away with the status bar instead. -->
+       (crbug.com/40634649), so the installed app's status bar is the manifest's
+       near-black in both themes. See README, "Why the status bar is always
+       dark". -->
   <meta name="theme-color" content="#faf8ef" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
@@ -48,7 +48,7 @@
   <meta name="mobile-web-app-capable" content="yes">
 
   <style>
-    /* Clear the system bars when launched full-screen from the home screen. */
+    /* Keep clear of the camera cutout and any bars the page runs under. */
     body {
       padding-top: env(safe-area-inset-top, 0px);
       padding-bottom: env(safe-area-inset-bottom, 0px);
