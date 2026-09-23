@@ -253,8 +253,7 @@
       var isMine = r.player_id === playerId;
       return '<li class="lb-row' + (isMine ? " is-me" : "") + '">' +
              '<span class="lb-rank">' + (i + 1) + "</span>" +
-             '<span class="lb-name">' + esc(r.name || "Player") +
-               (isMine ? ' <span class="lb-you">you</span>' : "") + "</span>" +
+             '<span class="lb-name">' + esc(r.name || "Player") + "</span>" +
              milestones(r) +
              '<span class="lb-score">' + (r.best || 0).toLocaleString() +
              "</span></li>";
