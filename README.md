@@ -34,6 +34,11 @@ board comes out at **388px instead of 280px — 92% more playing area.**
 build reads them on the whole document, so a flick started on the heading or in
 the margin still moves tiles.
 
+**No instructions on screen.** Upstream's "Join the numbers…" tagline and its
+how-to-play paragraph are gone; the only footer text left is the credit line.
+The theme toggle and New Game sit right-aligned under the scores, and the height
+the footer freed goes back to the board wherever height is what limits it.
+
 **Fixed a double-fire bug.** Upstream's `bindButtonPress` binds both `click` and
 `touchend`, so one tap runs the handler twice — on the win screen that restarted
 the game and dismissed the message in a single tap. This build binds `click`

@@ -47,7 +47,7 @@
     var current = stored();
     apply(current);
 
-    var footer = document.querySelector(".game-explanation");
+    var footer = document.querySelector(".game-credit");
     if (!footer || !footer.parentNode) return;
 
     var wrap = document.createElement("div");
