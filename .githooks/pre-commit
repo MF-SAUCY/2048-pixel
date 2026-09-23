@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stamp the service worker's cache version from the staged app files, so every
+# commit that changes what ships also changes what installed copies download.
+# Enable once per clone: git config core.hooksPath .githooks
+exec python tools/stamp_sw.py

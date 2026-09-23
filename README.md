@@ -179,8 +179,8 @@ git subtree push --prefix app origin gh-pages
 ```
 
 That second command is the deploy. It keeps the site URL clean while leaving this
-repo's layout alone. Bump `CACHE` in `app/sw.js` first if you touched a shell
-file, or already-installed copies will keep serving the old one.
+repo's layout alone. The service worker's `CACHE` version is stamped on every
+commit (see Rebuilding), so installed copies pick up whatever was deployed.
 
 Open the site on the Pixel in Chrome and use **⋮ → Add to Home screen** (Chrome may
 offer *Install app* instead — same thing). Because the manifest, the icons and a
@@ -229,8 +229,8 @@ home screen again.
 Open `chrome://inspect` on the desktop with the phone connected, or just check in
 DevTools on the desktop first: **Application → Manifest** lists any unmet install
 criterion. The usual causes are a non-HTTPS origin, a service worker that failed
-to register, or a stale cached `manifest.webmanifest` — bump `CACHE` in
-`app/sw.js` and reload twice.
+to register, or a stale `manifest.webmanifest` — the worker serves it
+network-first, so reload twice.
 
 ## The leaderboard
 
@@ -274,7 +274,7 @@ grant select, insert, update on public.scores to anon;
    (`sb_publishable_…`), or on older projects the legacy **anon / public** key.
    Never use the secret or service role key, which must never leave the server.
 4. Paste both into `app/js/leaderboard-config.js`.
-5. Bump `CACHE` in `app/sw.js`, then deploy:
+5. Commit, then deploy:
    `git push && git subtree push --prefix app origin gh-pages`.
 6. Open the site on both phones. Each device asks for a name once and keeps it.
 
@@ -335,8 +335,18 @@ stylesheet already answers to `data-theme`, so the game follows the host instead
 of carrying a toggle that would argue with it. Fonts stay external at the same
 relative path `app/` uses, so one `style/fonts/` directory serves both builds.
 
-Bump `CACHE` in `app/sw.js` whenever a shell file changes, or installed copies
-will keep serving the old one.
+The service worker's `CACHE` version is not edited by hand. A pre-commit hook
+runs `tools/stamp_sw.py`, which fingerprints every staged file under `app/`
+and writes the result into `app/sw.js` — so any change to what ships gets a new
+version and installed copies update, and a commit that leaves `app/` alone
+keeps the old one, so phones never re-download for nothing. Enable the hook
+once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+`python tools/stamp_sw.py --check` exits non-zero if the staged stamp is stale.
 
 ## Licence
 
