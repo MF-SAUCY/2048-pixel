@@ -195,22 +195,23 @@ registration and the manifest's icon paths — so serving from a repo subdirecto
 needs no configuration. `app/.nojekyll` stops Pages running the files through
 Jekyll on the way out.
 
-### Why the manifest asks for fullscreen
+### Why the status bar is always dark
 
 An installed WebAPK takes its status bar colour from the manifest's `theme_color`
 and bakes it in at install time. It does **not** repaint when the page changes
 `meta[name="theme-color"]` at runtime ([crbug.com/40634649][bug]), so `theme.js`
 cannot reach it from inside the app. Since `theme_color` is a single static value
 and this app has two grounds — cream and near-black — any choice leaves one theme
-with a mismatched band across the top of the screen.
+with a mismatched band across the top of the screen. This app picks the
+near-black: right for night play, a dark strip above the cream page by day.
 
-`"display": "fullscreen"` removes the status bar instead of trying to colour it,
-which is correct in both themes and suits a game besides. `display_override`
-falls back to `standalone` on anything that will not do fullscreen. The cost is
-no clock or battery while playing; swiping down from the top edge brings the
-status bar back temporarily. To trade that back, set `"display": "standalone"`
-and drop `display_override` — and then pick whichever single `theme_color` you
-would rather look at.
+It used to run `"display": "fullscreen"` to do away with the status bar instead.
+That stopped holding up once the back-gesture guard existed: in fullscreen,
+Android reveals the system bars for a few seconds on any edge swipe, shrinking
+the page's viewport and then growing it back, so every caught back made the whole
+layout jump twice. `standalone` keeps the bars on screen all the time, so nothing
+moves. The board loses nothing on the Pixel, where its size is set by the
+screen's width, not its height.
 
 Browser tabs are unaffected by any of this: the page carries two media-scoped
 `theme-color` tags for the system-follows case, and `theme.js` writes the

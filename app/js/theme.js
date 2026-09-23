@@ -64,8 +64,8 @@
     //
     // This has no effect inside an installed WebAPK: that status bar colour is
     // baked from the manifest at install time and does not repaint at runtime
-    // (crbug.com/40634649). The manifest asks for fullscreen so there is no
-    // status bar there to mismatch.
+    // (crbug.com/40634649), so the installed app keeps the manifest's
+    // near-black status bar in both themes.
     var color = effective() === "dark" ? DARK_GROUND : LIGHT_GROUND;
     var metas = document.querySelectorAll('meta[name="theme-color"]');
     for (var i = 0; i < metas.length; i++) {
