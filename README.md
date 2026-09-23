@@ -141,6 +141,13 @@ it.
 small files — and serves it cache-first, so the game works in airplane mode once
 installed.
 
+Updates arrive without a force-close. Android usually resumes an installed app
+from memory rather than loading it, and a resume never asks the service worker
+to check for a new version, so the page calls `registration.update()` each time
+it becomes visible. When a new version takes over, the page reloads onto it the
+next time it is hidden, never mid-game; the game is in `localStorage`, so the
+reload loses nothing.
+
 ## Running it locally
 
 ```bash

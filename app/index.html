@@ -131,7 +131,33 @@
     // the game runs regardless, it just will not be installable.
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
-        navigator.serviceWorker.register("sw.js").catch(function () {});
+        var sw = navigator.serviceWorker;
+
+        // An installed app is usually resumed from memory rather than loaded,
+        // and only a load checks for a new version. So check on every return.
+        sw.register("sw.js").then(function (reg) {
+          document.addEventListener("visibilitychange", function () {
+            if (!document.hidden) reg.update().catch(function () {});
+          });
+        }).catch(function () {});
+
+        // When a new version takes over, move onto it the next time the app is
+        // out of sight, so a reload never lands mid-game. The game itself is in
+        // localStorage, so the reload loses nothing. The very first install
+        // also fires this, with nothing to swap, so it is skipped.
+        var hadController = !!sw.controller;
+        var pending = false;
+        sw.addEventListener("controllerchange", function () {
+          if (!hadController) {
+            hadController = true;
+            return;
+          }
+          pending = true;
+          if (document.hidden) location.reload();
+        });
+        document.addEventListener("visibilitychange", function () {
+          if (pending && document.hidden) location.reload();
+        });
       });
     }
   </script>
