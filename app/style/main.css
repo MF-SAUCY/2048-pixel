@@ -772,15 +772,6 @@ body,
   white-space: nowrap;
 }
 
-.lb-you {
-  margin-left: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
 /* Once a player has reached 2048, the best-tile pill gives way to counts of
    games that reached 2048 and 4096, each a chip in that tile's colour. */
 .lb-badges {
