@@ -266,7 +266,12 @@ A game counts once per milestone however long it runs on afterwards; a new game
 is recognised by the top tile dropping, which it can only do on a restart. A game
 already in progress when the counters first ran is not credited. Every field
 only goes up, so where the table is ahead of the device — a count corrected by
-hand in the dashboard — the device adopts the table's number. Scores post when a game ends and when
+hand in the dashboard — the device adopts the table's number.
+
+On the board, a player who has not yet reached 2048 shows their highest tile.
+From their first 2048 on, that pill gives way to badges in the tiles' own
+colours — `2048 ×3`, `4096 ×1` — since the highest tile is then implied. A zero
+count is left out. Scores post when a game ends and when
 a personal best is beaten, coalesced so a finished game is one write. If the
 network is down the row is kept in `localStorage` and flushed on the next
 successful contact, so the installed app still records scores in airplane mode.

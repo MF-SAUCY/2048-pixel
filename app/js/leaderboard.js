@@ -204,12 +204,21 @@
     write(WINS_4096_KEY, String(mine.wins4096));
   }
 
-  // A count of games that reached this tile, drawn as a chip in the tile's own
-  // colour once there is at least one.
-  function countCell(n, tile) {
-    n = n || 0;
-    return '<span class="lb-count' + (n ? " is-set" : "") +
-           '" data-tile="' + tile + '">' + n + "</span>";
+  // Until a player first reaches 2048 the row shows their highest tile. From
+  // then on that tile is implied, and the row shows how many games reached
+  // 2048 and 4096 instead, as chips in those tiles' colours. A zero count is
+  // left out rather than drawn.
+  function milestones(r) {
+    var badges = [[2048, r.wins_2048], [4096, r.wins_4096]]
+      .filter(function (m) { return m[1] > 0; })
+      .map(function (m) {
+        return '<span class="lb-badge" data-tile="' + m[0] + '">' +
+               m[0] + " ×" + m[1] + "</span>";
+      });
+    if (!badges.length) {
+      return '<span class="lb-tile">' + (r.best_tile || "—") + "</span>";
+    }
+    return '<span class="lb-badges">' + badges.join("") + "</span>";
   }
 
   function render(rows) {
@@ -240,19 +249,13 @@
       rows.sort(function (a, b) { return (b.best || 0) - (a.best || 0); });
     }
 
-    var head = '<li class="lb-head" aria-hidden="true"><span></span><span></span>' +
-               "<span>2048</span><span>4096</span><span>Top</span>" +
-               "<span>Best</span></li>";
-
-    listEl.innerHTML = head + rows.map(function (r, i) {
+    listEl.innerHTML = rows.map(function (r, i) {
       var isMine = r.player_id === playerId;
       return '<li class="lb-row' + (isMine ? " is-me" : "") + '">' +
              '<span class="lb-rank">' + (i + 1) + "</span>" +
              '<span class="lb-name">' + esc(r.name || "Player") +
                (isMine ? ' <span class="lb-you">you</span>' : "") + "</span>" +
-             countCell(r.wins_2048, 2048) +
-             countCell(r.wins_4096, 4096) +
-             '<span class="lb-tile">' + (r.best_tile || "—") + "</span>" +
+             milestones(r) +
              '<span class="lb-score">' + (r.best || 0).toLocaleString() +
              "</span></li>";
     }).join("");
