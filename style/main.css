@@ -106,7 +106,7 @@
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
      worth more than the margin. */
   --gutter: 12px;
-  --chrome: 236px; /* heading + controls + footer + palette switch + padding */
+  --chrome: 199px; /* heading + controls + credit line + palette switch + padding */
   --board-cap: 560px;
 
   --avail-h: calc(100vh - var(--chrome));
@@ -135,7 +135,7 @@
 /* The leaderboard is injected only when a backend is configured, so its height
    is reserved only when it is really there. */
 :root:has(.leaderboard) {
-  --chrome: 338px;
+  --chrome: 301px;
 }
 
 /* Wide gamut. The ramp is drawn at high chroma the whole way round, and the
@@ -399,17 +399,12 @@ h1.title {
 
 /* ---- controls row ---- */
 
+/* Just the theme toggle and New Game, right-aligned under the scores. */
 .above-game {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
-}
-
-.game-intro {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.4;
 }
 
 .restart-button {
@@ -956,7 +951,7 @@ body,
 
 /* ---- footer ---- */
 
-.game-explanation {
+.game-credit {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
@@ -964,15 +959,11 @@ body,
   color: var(--ink-muted);
 }
 
-.game-explanation a {
+.game-credit a {
   color: inherit;
 }
 
-.game-explanation .important {
-  font-weight: 700;
-}
-
-/* The palette switch sits under the footer text — a preference, not a move. */
+/* The palette switch sits under the credit line — a preference, not a move. */
 .palette-switch {
   display: flex;
   align-items: center;
@@ -1018,21 +1009,6 @@ body,
   outline-offset: 2px;
 }
 
-/* The arrow-key hint is noise on a touchscreen and the swipe hint is noise on a
-   desktop; show whichever matches the pointer. */
-.hint-touch {
-  display: none;
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .hint-keys {
-    display: none;
-  }
-  .hint-touch {
-    display: inline;
-  }
-}
-
 /* Landscape: reclaim the chrome so the board keeps its size. */
 @media (max-height: 560px) {
   :root {
@@ -1041,7 +1017,7 @@ body,
   .container {
     gap: 8px;
   }
-  .game-explanation,
+  .game-credit,
   .palette-switch,
   .leaderboard {
     display: none;
