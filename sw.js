@@ -4,7 +4,9 @@
  * install and served cache-first. There is no network dependency at runtime:
  * once installed, the game works in a tunnel, on a plane, in airplane mode.
  *
- * Bump CACHE when any shell file changes — the old cache is dropped on activate.
+ * CACHE is stamped by tools/stamp_sw.py from a fingerprint of everything under
+ * app/, on every commit via the pre-commit hook; do not edit it by hand. Any
+ * change to what ships renames it, and the old cache is dropped on activate.
  *
  * Two exceptions to cache-first, both about staleness:
  *
@@ -17,7 +19,7 @@
  *   the previous display mode. Offline, the cached copy still answers.
  */
 
-var CACHE = "2048-pixel-v18";
+var CACHE = "2048-pixel-5d686066ce";
 
 var SHELL = [
   "./",
