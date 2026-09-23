@@ -222,7 +222,9 @@ create table public.scores (
   name      text    not null,
   best      integer not null default 0,
   games     integer not null default 0,
-  best_tile integer not null default 0
+  best_tile integer not null default 0,
+  wins_2048 integer not null default 0,
+  wins_4096 integer not null default 0
 );
 
 alter table public.scores enable row level security;
@@ -246,10 +248,25 @@ grant select, insert, update on public.scores to anon;
    `git push && git subtree push --prefix app origin gh-pages`.
 6. Open the site on both phones. Each device asks for a name once and keeps it.
 
+A table created before the 2048 / 4096 counters existed needs them added
+**before** the new page is deployed, since the page asks for those columns by
+name and a read of a missing column fails:
+
+```sql
+alter table public.scores
+  add column if not exists wins_2048 integer not null default 0,
+  add column if not exists wins_4096 integer not null default 0;
+```
+
 ### What it records
 
 Each device mints a random id on first run and owns one row: name, best score,
-games finished, and highest tile reached. Scores post when a game ends and when
+games finished, highest tile reached, and how many games reached 2048 and 4096.
+A game counts once per milestone however long it runs on afterwards; a new game
+is recognised by the top tile dropping, which it can only do on a restart. A game
+already in progress when the counters first ran is not credited. Every field
+only goes up, so where the table is ahead of the device — a count corrected by
+hand in the dashboard — the device adopts the table's number. Scores post when a game ends and when
 a personal best is beaten, coalesced so a finished game is one write. If the
 network is down the row is kept in `localStorage` and flushed on the next
 successful contact, so the installed app still records scores in airplane mode.
