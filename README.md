@@ -36,8 +36,11 @@ the margin still moves tiles.
 
 **No instructions on screen.** Upstream's "Join the numbers…" tagline and its
 how-to-play paragraph are gone; the only footer text left is the credit line.
-The theme toggle and New Game sit right-aligned under the scores, and the height
-the footer freed goes back to the board wherever height is what limits it.
+The scores and the controls row (theme toggle, New Game) stack on the right, and
+the logo takes the left at the height of both, sized with a container query to
+fill whatever width they leave: about 82px on the Pixel, against upstream's
+fixed size. The height the footer freed goes back to the board wherever height
+is what limits it.
 
 **Fixed a double-fire bug.** Upstream's `bindButtonPress` binds both `click` and
 `touchend`, so one tap runs the handler twice — on the win screen that restarted

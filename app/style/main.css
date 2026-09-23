@@ -318,19 +318,37 @@ body {
 
 /* ---- heading ---- */
 
+/* The logo takes the left of the heading at the full height of both rows on
+   the right (scores, then the controls), and is sized to fill whatever width
+   those leave it: the title box is a size container, and "2048" in Clear Sans
+   Bold runs 2.35em wide, so 100cqi / 2.4 fits it with a hair to spare. Should
+   a six-digit score widen the boxes, the logo gives way rather than colliding. */
 .heading {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 12px;
+}
+
+.title-box {
+  flex: 1 1 0;
+  min-width: 0;
+  container-type: inline-size;
 }
 
 h1.title {
   margin: 0;
-  font-size: clamp(42px, calc(var(--board) * 0.17), 80px);
+  font-size: clamp(24px, calc(100cqi / 2.4), 150px);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.heading-side {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .scores-container {
@@ -1011,7 +1029,10 @@ body,
 
 /* Landscape: reclaim the chrome so the board keeps its size. */
 @media (max-height: 560px) {
-  :root {
+  /* Restated for :has(.leaderboard), which outranks a bare :root and would
+     otherwise keep reserving room for a leaderboard this block hides. */
+  :root,
+  :root:has(.leaderboard) {
     --chrome: 150px;
   }
   .container {
