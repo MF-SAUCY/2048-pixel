@@ -42,6 +42,17 @@ fill whatever width they leave: about 82px on the Pixel, against upstream's
 fixed size. The height the footer freed goes back to the board wherever height
 is what limits it.
 
+**A guard against the back gesture.** Android's back gesture is a swipe in from
+either edge, which is also a left or right move started near the edge. A page
+cannot switch the gesture off, but it can choose what back lands on:
+`back_guard.js` keeps one extra history entry on top, so the first back pops it,
+leaves the game alone and says "Swipe back again to leave"; a second back with no
+move in between exits as usual. Chrome skips entries a page adds without a user
+gesture (so pages cannot trap people), so the entry is only pushed from inside
+an input event. Excluded from the single-file bundle, where it would land in the
+host page's history. Lowering the phone's right-edge back sensitivity (Settings →
+System → Gestures → Navigation mode → gear) narrows the zone further.
+
 **Fixed a double-fire bug.** Upstream's `bindButtonPress` binds both `click` and
 `touchend`, so one tap runs the handler twice — on the win screen that restarted
 the game and dismissed the message in a single tap. This build binds `click`
