@@ -106,7 +106,7 @@
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
      worth more than the margin. */
   --gutter: 12px;
-  --chrome: 199px; /* heading + controls + credit line + palette switch + padding */
+  --chrome: 218px; /* heading + controls + credit and Dispatch lines + palette switch + padding */
   --board-cap: 560px;
 
   --avail-h: calc(100vh - var(--chrome));
@@ -135,7 +135,7 @@
 /* The leaderboard is injected only when a backend is configured, so its height
    is reserved only when it is really there. */
 :root:has(.leaderboard) {
-  --chrome: 301px;
+  --chrome: 320px;
 }
 
 /* Wide gamut. The ramp is drawn at high chroma the whole way round, and the
@@ -1005,6 +1005,10 @@ body,
 
 .game-credit a {
   color: inherit;
+}
+
+.game-credit .spinoff-link {
+  font-weight: 700;
 }
 
 /* The palette switch sits under the credit line — a preference, not a move. */

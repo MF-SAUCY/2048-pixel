@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dispatch · 2048</title>
+  <meta name="description" content="Dispatch: a 2048 spinoff. Build the ordered tile and ship it out the right edge.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#faf8ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+
+  <script>
+    // Same pre-paint theme and palette as the classic page, so night play does
+    // not flash cream.
+    try {
+      if (localStorage.getItem("2048-palette") === "original") {
+        document.documentElement.setAttribute("data-palette", "original");
+      }
+      var t = localStorage.getItem("2048-theme");
+      if (t === "light" || t === "dark") {
+        document.documentElement.setAttribute("data-theme", t);
+        var c = t === "dark" ? "#14110e" : "#faf8ef";
+        var m = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < m.length; i++) m[i].setAttribute("content", c);
+      }
+    } catch (e) {}
+  </script>
+
+  <link rel="stylesheet" href="../style/main.css">
+  <link rel="stylesheet" href="dispatch.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="icon" href="../icons/icon-192.png" sizes="192x192">
+
+  <style>
+    body {
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container dispatch">
+    <div class="heading">
+      <div class="title-box">
+        <h1 class="title">Dispatch</h1>
+      </div>
+      <div class="heading-side">
+        <div class="scores-container">
+          <div class="score-container">0</div>
+          <div class="best-container">0</div>
+        </div>
+        <div class="above-game">
+          <a class="restart-button" href="#" role="button">Restart</a>
+        </div>
+      </div>
+    </div>
+
+    <section class="dispatch-panel" aria-label="Orders">
+      <ol class="dispatch-orders"></ol>
+      <div class="dispatch-meta">
+        <div class="dispatch-status"></div>
+        <div class="dispatch-next"></div>
+      </div>
+    </section>
+
+    <div class="game-container">
+      <div class="game-message">
+        <p></p>
+        <div class="lower">
+          <a class="retry-button" href="#" role="button">Play again</a>
+        </div>
+      </div>
+
+      <div class="grid-container">
+        <div class="grid-cell" data-row="1" data-col="1"></div>
+        <div class="grid-cell" data-row="1" data-col="2"></div>
+        <div class="grid-cell" data-row="1" data-col="3"></div>
+        <div class="grid-cell" data-row="1" data-col="4"></div>
+        <div class="grid-cell" data-row="2" data-col="1"></div>
+        <div class="grid-cell" data-row="2" data-col="2"></div>
+        <div class="grid-cell" data-row="2" data-col="3"></div>
+        <div class="grid-cell" data-row="2" data-col="4"></div>
+        <div class="grid-cell" data-row="3" data-col="1"></div>
+        <div class="grid-cell" data-row="3" data-col="2"></div>
+        <div class="grid-cell" data-row="3" data-col="3"></div>
+        <div class="grid-cell" data-row="3" data-col="4"></div>
+        <div class="grid-cell" data-row="4" data-col="1"></div>
+        <div class="grid-cell" data-row="4" data-col="2"></div>
+        <div class="grid-cell" data-row="4" data-col="3"></div>
+        <div class="grid-cell" data-row="4" data-col="4"></div>
+      </div>
+
+      <div class="tile-container"></div>
+    </div>
+
+    <p class="dispatch-rules">
+      Make the ordered tile and slide it into a lit bay on that edge to ship it.
+      8 orders, 100 turns. Merges score nothing.
+    </p>
+    <p class="dispatch-foot">
+      <span class="dispatch-day"></span>
+      <a href="../">Classic 2048</a>
+    </p>
+  </div>
+
+  <script src="../js/bind_polyfill.js"></script>
+  <script src="../js/classlist_polyfill.js"></script>
+  <script src="../js/animframe_polyfill.js"></script>
+  <script src="../js/input_manager.js"></script>
+  <script src="../js/html_actuator.js"></script>
+  <script src="../js/grid.js"></script>
+  <script src="../js/tile.js"></script>
+  <script src="../js/local_storage_manager.js"></script>
+  <script src="../js/game_manager.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/effects.js"></script>
+  <script src="../js/back_guard.js"></script>
+  <script src="dispatch.js"></script>
+</body>
+</html>

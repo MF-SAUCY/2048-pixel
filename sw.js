@@ -19,7 +19,7 @@
  *   the previous display mode. Offline, the cached copy still answers.
  */
 
-var CACHE = "2048-pixel-5d686066ce";
+var CACHE = "2048-pixel-adcf11498a";
 
 var SHELL = [
   "./",
@@ -45,6 +45,10 @@ var SHELL = [
   "./js/effects.js",
   "./js/back_guard.js",
   "./js/application.js",
+  "./dispatch/",
+  "./dispatch/index.html",
+  "./dispatch/dispatch.css",
+  "./dispatch/dispatch.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",
