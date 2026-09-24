@@ -1010,11 +1010,10 @@ body,
   color: inherit;
 }
 
-.game-credit .spinoff-link {
-  font-weight: 700;
-}
-
-/* The palette switch sits under the credit line — a preference, not a move. */
+/* The game and palette switches sit under the credit line — a choice of game
+   and a preference, not moves. The game switch is plain links, since choosing
+   a game is going to another page. */
+.game-switch,
 .palette-switch {
   display: flex;
   align-items: center;
@@ -1030,6 +1029,7 @@ body,
   color: var(--ink-muted);
 }
 
+.game-switch .seg,
 .palette-switch .seg {
   display: inline-flex;
   padding: 2px;
@@ -1037,6 +1037,7 @@ body,
   background: var(--cell-empty);
 }
 
+.game-switch .seg a,
 .palette-switch .seg button {
   padding: 4px 12px;
   border: 0;
@@ -1047,14 +1048,17 @@ body,
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  text-decoration: none;
   transition: background-color 160ms ease, color 160ms ease;
 }
 
+.game-switch .seg a[aria-current="page"],
 .palette-switch .seg button[aria-pressed="true"] {
   background: var(--board-bg);
   color: var(--ink-light);
 }
 
+.game-switch .seg a:focus-visible,
 .palette-switch .seg button:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -1072,6 +1076,7 @@ body,
     gap: 8px;
   }
   .game-credit,
+  .game-switch,
   .palette-switch,
   .leaderboard {
     display: none;
@@ -2208,7 +2213,10 @@ GameManager.prototype.positionsEqual = function (first, second) {
     render();
     wrap.appendChild(label);
     wrap.appendChild(group);
-    footer.parentNode.insertBefore(wrap, footer.nextSibling);
+    // Under the Classic / Dispatch switch when the page has one, so the two
+    // preferences sit together.
+    var anchor = document.querySelector(".game-switch") || footer;
+    anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
   }
 
   if (document.readyState === "loading") {

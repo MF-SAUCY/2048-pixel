@@ -48,8 +48,9 @@ def main() -> None:
     index = (APP / "index.html").read_text(encoding="utf-8")
     css = (APP / "style" / "main.css").read_text(encoding="utf-8")
     markup = extract_markup(index)
-    # The Dispatch link points at a sibling page the single file does not carry.
-    markup = re.sub(r'\s*<br><a class="spinoff-link"[^\n]*', "", markup)
+    # The Classic / Dispatch switch links to a sibling page the single file
+    # does not carry.
+    markup = re.sub(r'\s*<nav class="game-switch".*?</nav>', "", markup, flags=re.S)
 
     # index.html links the stylesheet from style/, so its font URLs are relative
     # to that directory. Inlined into the page, they need the style/ prefix back.

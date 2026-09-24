@@ -232,10 +232,10 @@ criterion. The usual causes are a non-HTTPS origin, a service worker that failed
 to register, or a stale `manifest.webmanifest` — the worker serves it
 network-first, so reload twice.
 
-## Dispatch, a harder spinoff (prototype)
+## Dispatch, a harder spinoff
 
-`app/dispatch/` is a second game on the same engine, reached from the link under
-the classic board. Classic asks for the biggest tile; Dispatch asks for the right
+`app/dispatch/` is a second game on the same engine, chosen with the Game switch
+(Classic / Dispatch) under the board on either page. Classic asks for the biggest tile; Dispatch asks for the right
 one. Tiles slide and merge exactly as in 2048, but there is always an order — a
 value and an edge, like "32 → left" — and a tile of that value that ends a swipe
 in one of the edge's two middle cells ships off the board. Eight orders, 100
