@@ -1,10 +1,10 @@
 /* Dispatch — layered on the classic stylesheet, which supplies the board,
    tiles, colour ramp, themes and fonts. Only what Dispatch adds lives here. */
 
-/* Heading, orders panel, rules and footer: more chrome than the classic page. */
+/* Heading, orders panel, rules and game switch, measured in the browser. */
 @media (min-height: 561px) {
   :root {
-    --chrome: 300px;
+    --chrome: 340px;
   }
 }
 
@@ -226,25 +226,20 @@
 
 /* ---- footer ---- */
 
+.dispatch-day {
+  font-weight: 700;
+}
+
+.dispatch-day::after {
+  content: " \00b7";
+}
+
 .dispatch-rules {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.45;
   text-align: center;
   color: var(--ink-muted);
-}
-
-.dispatch-foot {
-  display: flex;
-  justify-content: space-between;
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--ink-muted);
-}
-
-.dispatch-foot a {
-  color: inherit;
-  font-weight: 700;
 }
 
 @media (prefers-reduced-motion: reduce) {

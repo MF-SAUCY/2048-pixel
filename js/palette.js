@@ -95,7 +95,10 @@
     render();
     wrap.appendChild(label);
     wrap.appendChild(group);
-    footer.parentNode.insertBefore(wrap, footer.nextSibling);
+    // Under the Classic / Dispatch switch when the page has one, so the two
+    // preferences sit together.
+    var anchor = document.querySelector(".game-switch") || footer;
+    anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
   }
 
   if (document.readyState === "loading") {

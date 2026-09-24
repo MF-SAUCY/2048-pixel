@@ -96,13 +96,17 @@
     </div>
 
     <p class="dispatch-rules">
+      <span class="dispatch-day"></span>
       Make the ordered tile and slide it into a lit bay on that edge to ship it.
       8 orders, 100 turns. Merges score nothing.
     </p>
-    <p class="dispatch-foot">
-      <span class="dispatch-day"></span>
-      <a href="../">Classic 2048</a>
-    </p>
+    <nav class="game-switch" aria-label="Game">
+      <span class="palette-label">Game</span>
+      <div class="seg">
+        <a href="../">Classic</a>
+        <a href="./" aria-current="page">Dispatch</a>
+      </div>
+    </nav>
   </div>
 
   <script src="../js/bind_polyfill.js"></script>
