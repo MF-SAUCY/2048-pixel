@@ -249,8 +249,17 @@ turn number. On a given day both players face the same run, so the numbers are
 comparable. Only the middle two cells of an edge count as bays, so a tile parked
 in a corner cannot quietly serve two edges.
 
+**Only the first run of the day counts.** Restart replays the same run with every
+tile arriving where it did before, so a second go is played with foreknowledge:
+it is marked Practice and never posts. The first attempt posts as it goes and
+locks when the run ends or is restarted after any move, which is why Restart
+asks for a second tap from the first move on. The Dispatch page's leaderboard
+shows today's run — shipped count (green once all 8 ship) and score, or "not
+played yet" — with all-time best first-attempt scores and full runs under it.
+
 It keeps its own saved run and best score (`dispatch-state`, `dispatch-best`) and
-is not on the leaderboard yet. `node tools/test_dispatch.js` runs the rule tests;
+its first-attempt record (`dispatch-first`, `dispatch-first-best`,
+`dispatch-full-runs`). `node tools/test_dispatch.js` runs the rule tests;
 `--sim` plays 60 days with a lookahead bot. At 100 turns the bot finishes 56 of
 60 runs using about 94 turns: incoming tiles add roughly 2.2 of value a turn and
 the orders need 192, so the run is an economy of value more than a race.
@@ -277,7 +286,13 @@ create table public.scores (
   games     integer not null default 0,
   best_tile integer not null default 0,
   wins_2048 integer not null default 0,
-  wins_4096 integer not null default 0
+  wins_4096 integer not null default 0,
+  dispatch_day     text,
+  dispatch_score   integer not null default 0,
+  dispatch_shipped integer not null default 0,
+  dispatch_done    boolean not null default false,
+  dispatch_best    integer not null default 0,
+  dispatch_runs    integer not null default 0
 );
 
 alter table public.scores enable row level security;
@@ -309,6 +324,18 @@ name and a read of a missing column fails:
 alter table public.scores
   add column if not exists wins_2048 integer not null default 0,
   add column if not exists wins_4096 integer not null default 0;
+```
+
+and, for Dispatch, the same way:
+
+```sql
+alter table public.scores
+  add column if not exists dispatch_day     text,
+  add column if not exists dispatch_score   integer not null default 0,
+  add column if not exists dispatch_shipped integer not null default 0,
+  add column if not exists dispatch_done    boolean not null default false,
+  add column if not exists dispatch_best    integer not null default 0,
+  add column if not exists dispatch_runs    integer not null default 0;
 ```
 
 ### What it records

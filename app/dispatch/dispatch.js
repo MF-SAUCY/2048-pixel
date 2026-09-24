@@ -1,4 +1,4 @@
-/* Dispatch — a 2048 spinoff. Prototype.
+/* Dispatch — a 2048 spinoff.
  *
  * Classic 2048 asks for the biggest tile. Dispatch asks for the right one:
  *
@@ -25,6 +25,13 @@
  * Only the two middle cells of an edge are bays, so a tile parked in a corner
  * does not quietly qualify for two edges at once: delivering means bringing it
  * out.
+ *
+ * The first run of the day is the one that counts. Restart replays the same
+ * run, and every tile arrives exactly where it did before, so a second go is
+ * played with foreknowledge; it is marked Practice and never posts. The first
+ * attempt ends when the run does, or when it is restarted after any move. Its
+ * result is kept in `records` (localStorage in the app) and announced through
+ * onResult, which the leaderboard listens to.
  *
  * The movement code is upstream's GameManager, borrowed method by method, so a
  * swipe behaves exactly as it does in the classic game.
@@ -135,6 +142,8 @@
     this.actuator = options.actuator;
     this.storage = options.storage;
     this.seedFor = options.seedFor || todaySeed;
+    this.records = options.records || null;
+    this.onResult = options.onResult || null;
 
     if (options.input) {
       options.input.on("move", this.move.bind(this));
@@ -180,11 +189,15 @@
     }
 
     this.orders = makeOrders(this.seed);
+    var first = this.firstRecord();
+    this.attempt = first && first.seed === this.seed && first.done ? "practice" : "first";
     this.shipment = null;
     this.actuate();
   };
 
   DispatchManager.prototype.restart = function () {
+    // Restarting the counted run after any move ends it where it stands.
+    if (this.attempt === "first" && this.turn > 0) this.recordFirst(true);
     if (this.storage) this.storage.clearGameState();
     if (this.actuator) this.actuator.continueGame();
     this.setup();
@@ -305,7 +318,51 @@
     return out;
   };
 
+  /* ---- the first attempt of the day ---- */
+
+  DispatchManager.prototype.firstRecord = function () {
+    if (!this.records) return null;
+    try {
+      return JSON.parse(this.records.get("dispatch-first") || "null");
+    } catch (e) {
+      return null;
+    }
+  };
+
+  DispatchManager.prototype.totals = function () {
+    var get = function (key) {
+      return this.records ? parseInt(this.records.get(key) || "0", 10) || 0 : 0;
+    }.bind(this);
+    return { best: get("dispatch-first-best"), runs: get("dispatch-full-runs") };
+  };
+
+  DispatchManager.prototype.recordFirst = function (ending) {
+    if (!this.records) return;
+    var previous = this.firstRecord();
+    var done = ending || this.isGameTerminated();
+    var record = {
+      seed: this.seed,
+      score: this.score,
+      shipped: this.shipped,
+      done: done,
+      counted: !!(previous && previous.seed === this.seed && previous.counted)
+    };
+
+    var totals = this.totals();
+    if (this.score > totals.best) {
+      this.records.set("dispatch-first-best", String(this.score));
+    }
+    if (done && this.shipped === ORDER_COUNT && !record.counted) {
+      this.records.set("dispatch-full-runs", String(totals.runs + 1));
+      record.counted = true;
+    }
+    this.records.set("dispatch-first", JSON.stringify(record));
+    if (this.onResult) this.onResult(record, this.totals());
+  };
+
   DispatchManager.prototype.actuate = function () {
+    if (this.attempt === "first" && this.turn > 0) this.recordFirst(false);
+
     var best = 0;
     if (this.storage) {
       if (this.storage.getBestScore() < this.score) {
@@ -330,7 +387,8 @@
       shipped: this.shipped,
       turnsLeft: TURN_LIMIT - this.turn,
       upcoming: this.upcomingSupply(3),
-      shipment: this.shipment
+      shipment: this.shipment,
+      attempt: this.attempt
     });
   };
 
@@ -342,7 +400,6 @@
     this.orderList = document.querySelector(".dispatch-orders");
     this.statusEl = document.querySelector(".dispatch-status");
     this.nextEl = document.querySelector(".dispatch-next");
-    this.dayEl = document.querySelector(".dispatch-day");
     this.bayBar = document.createElement("div");
     this.bayBar.className = "bay-bar";
     this.board.appendChild(this.bayBar);
@@ -445,21 +502,16 @@
   DispatchActuator.prototype.renderStatus = function (meta) {
     this.statusEl.innerHTML =
       "<span><b>" + meta.shipped + "</b>/" + meta.orders.length + " shipped</span>" +
-      "<span><b>" + meta.turnsLeft + "</b> turns left</span>";
+      "<span><b>" + meta.turnsLeft + "</b> turns left</span>" +
+      (meta.attempt === "practice"
+        ? '<span class="practice-tag" title="The first run of the day already counted">Practice</span>'
+        : "");
 
     this.nextEl.innerHTML = meta.upcoming.length
       ? '<span class="next-label">Next</span>' + meta.upcoming.map(function (v) {
           return '<span class="next-chip" data-v="' + v + '" style="--c: var(--t' + v + ')">' + v + "</span>";
         }).join("")
       : "";
-
-    if (this.dayEl) {
-      var parts = meta.seed.split("-");
-      var date = new Date(+parts[0], +parts[1] - 1, +parts[2]);
-      this.dayEl.textContent = "Run for " + date.toLocaleDateString(undefined, {
-        weekday: "short", month: "short", day: "numeric"
-      });
-    }
   };
 
   DispatchActuator.prototype.message = function (won) {
@@ -473,7 +525,36 @@
 
   /* ---- exports and start-up ---- */
 
+  var localRecords = {
+    get: function (key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        return null;
+      }
+    },
+    set: function (key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        /* session-only */
+      }
+    }
+  };
+
   function start() {
+    // Once per page: a second game would answer the same swipes.
+    if (root.Dispatch.game) return root.Dispatch.game;
+
+    // Restart confirms after any move, not only once there is a score: here a
+    // restart also ends the run that counts.
+    if (root.KeyboardInputManager) {
+      root.KeyboardInputManager.prototype.hasProgress = function () {
+        var game = root.Dispatch.game;
+        return !!game && game.turn > 0 && !game.isGameTerminated();
+      };
+    }
+
     var storage = new LocalStorageManager();
     storage.bestScoreKey = "dispatch-best";
     storage.gameStateKey = "dispatch-state";
@@ -481,7 +562,17 @@
     root.Dispatch.game = new DispatchManager({
       actuator: new DispatchActuator(),
       storage: storage,
-      input: new KeyboardInputManager()
+      input: new KeyboardInputManager(),
+      records: localRecords,
+      onResult: function (record, totals) {
+        try {
+          document.dispatchEvent(new CustomEvent("dispatch:result", {
+            detail: { record: record, totals: totals }
+          }));
+        } catch (e) {
+          /* no CustomEvent: the leaderboard reads storage on its next sync */
+        }
+      }
     });
     return root.Dispatch.game;
   }

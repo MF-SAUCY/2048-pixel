@@ -109,7 +109,11 @@
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
      worth more than the margin. */
   --gutter: 12px;
-  --chrome: 218px; /* heading + controls + credit and Dispatch lines + palette switch + padding */
+  /* Everything on the page but the board: heading, credit line, the game and
+     tile switches, the gaps between them and the container's padding. Measured
+     in the browser at 412px wide, not estimated; if it runs short, a screen
+     short enough for height to size the board cuts off the bottom rows. */
+  --chrome: 274px;
   --board-cap: 560px;
 
   --avail-h: calc(100vh - var(--chrome));
@@ -138,7 +142,7 @@
 /* The leaderboard is injected only when a backend is configured, so its height
    is reserved only when it is really there. */
 :root:has(.leaderboard) {
-  --chrome: 320px;
+  --chrome: 382px; /* plus the leaderboard, measured at its taller name-entry state */
 }
 
 /* Wide gamut. The ramp is drawn at high chroma the whole way round, and the

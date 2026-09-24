@@ -205,6 +205,108 @@ test("a saved run reloads only on its own day", () => {
   assert.strictEqual(game("2026-09-24", state).turn, 0);
 });
 
+/* ---- the first attempt of the day ---- */
+
+function memoryRecords() {
+  const data = {};
+  return { get: (k) => (k in data ? data[k] : null), set: (k, v) => { data[k] = String(v); }, data };
+}
+
+// A player on one device: saved run and records persist between "app opens".
+function player(seed) {
+  const storage = memoryStorage();
+  const records = memoryRecords();
+  const results = [];
+  const open = () => new D.DispatchManager({
+    storage, records, seedFor: () => seed,
+    onResult: (record, totals) => results.push(plain({ record, totals })),
+  });
+  return { open, records, results };
+}
+
+function shipOne(g) {
+  const order = g.activeOrder();
+  clearBoard(g);
+  const bay = D.bayCells(order.edge)[0];
+  const dir = { top: UP, right: RIGHT, bottom: DOWN, left: LEFT }[order.edge];
+  const from = {
+    x: order.edge === "left" ? 3 : order.edge === "right" ? 0 : bay.x,
+    y: order.edge === "top" ? 3 : order.edge === "bottom" ? 0 : bay.y,
+  };
+  place(g, from.x, from.y, order.value);
+  g.move(dir);
+}
+
+test("the first run of the day records as it goes, and posts nothing before a move", () => {
+  const p = player("2026-09-24");
+  const g = p.open();
+  assert.strictEqual(g.attempt, "first");
+  assert.strictEqual(p.results.length, 0, "opening the page is not a result");
+  shipOne(g);
+  const rec = JSON.parse(p.records.data["dispatch-first"]);
+  same(rec, { seed: "2026-09-24", score: 100, shipped: 1, done: false, counted: false });
+});
+
+test("restarting after a move ends the first attempt; the next run is practice", () => {
+  const p = player("2026-09-24");
+  const g = p.open();
+  shipOne(g);
+  g.restart();
+  assert.strictEqual(g.attempt, "practice");
+  const rec = JSON.parse(p.records.data["dispatch-first"]);
+  assert.strictEqual(rec.done, true);
+  assert.strictEqual(rec.shipped, 1);
+  shipOne(g);
+  shipOne(g);
+  assert.strictEqual(JSON.parse(p.records.data["dispatch-first"]).shipped, 1, "practice never posts");
+  assert.strictEqual(p.open().attempt, "practice", "still practice after reopening");
+});
+
+test("restarting before any move keeps the first attempt", () => {
+  const p = player("2026-09-24");
+  const g = p.open();
+  g.restart();
+  assert.strictEqual(g.attempt, "first");
+  assert.strictEqual(p.records.data["dispatch-first"], undefined);
+});
+
+test("reopening mid-run carries on with the first attempt", () => {
+  const p = player("2026-09-24");
+  shipOne(p.open());
+  const again = p.open();
+  assert.strictEqual(again.attempt, "first");
+  assert.strictEqual(again.shipped, 1);
+});
+
+test("a full first run counts once toward full runs and sets the best", () => {
+  const p = player("2026-09-24");
+  const g = p.open();
+  for (let i = 0; i < 8; i++) shipOne(g);
+  assert.strictEqual(g.won, true);
+  const rec = JSON.parse(p.records.data["dispatch-first"]);
+  assert.strictEqual(rec.done, true);
+  assert.strictEqual(p.records.data["dispatch-full-runs"], "1");
+  assert.strictEqual(p.records.data["dispatch-first-best"], String(g.score));
+  g.restart();
+  for (let i = 0; i < 8; i++) shipOne(g);
+  assert.strictEqual(p.records.data["dispatch-full-runs"], "1", "a practice win does not count");
+  p.open();
+  assert.strictEqual(p.records.data["dispatch-full-runs"], "1", "reopening does not recount");
+});
+
+test("a new day is a new first attempt", () => {
+  const storage = memoryStorage();
+  const records = memoryRecords();
+  let seed = "2026-09-24";
+  const open = () => new D.DispatchManager({ storage, records, seedFor: () => seed });
+  const g = open();
+  shipOne(g);
+  g.restart();
+  assert.strictEqual(open().attempt, "practice");
+  seed = "2026-09-25";
+  assert.strictEqual(open().attempt, "first");
+});
+
 console.log(`\n${passed} passed`);
 
 /* ---- difficulty simulation ---- */
