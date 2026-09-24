@@ -1,0 +1,255 @@
+/* Dispatch — layered on the classic stylesheet, which supplies the board,
+   tiles, colour ramp, themes and fonts. Only what Dispatch adds lives here. */
+
+/* Heading, orders panel, rules and footer: more chrome than the classic page. */
+@media (min-height: 561px) {
+  :root {
+    --chrome: 300px;
+  }
+}
+
+/* "Dispatch" runs about 4.4em wide in Clear Sans Bold, against 2.35em for
+   "2048", so the fill-the-box sizing divides by more. */
+.dispatch h1.title {
+  font-size: clamp(22px, calc(100cqi / 4.6), 90px);
+}
+
+/* ---- orders ---- */
+
+.dispatch-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dispatch-orders {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.55;
+}
+
+.order.is-active {
+  flex: 0 0 auto;
+  gap: 8px;
+  margin-right: auto;
+  padding: 6px 12px 6px 6px;
+  border-radius: 8px;
+  background: var(--board-bg);
+  color: var(--ink-light);
+  opacity: 1;
+}
+
+.order.is-done {
+  font-weight: 700;
+  opacity: 1;
+}
+
+.order-chip,
+.next-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: var(--c);
+  color: var(--tile-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.order-chip {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 6px;
+  font-size: 15px;
+}
+
+.order.is-active .order-chip {
+  min-width: 50px;
+  height: 42px;
+  font-size: 22px;
+}
+
+/* Upstream's palette sets 8 and up in light type. */
+:root[data-palette="original"] .order-chip:not([data-v="2"]):not([data-v="4"]),
+:root[data-palette="original"] .next-chip:not([data-v="2"]):not([data-v="4"]) {
+  color: var(--ink-light);
+}
+
+.order-edge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.order-edge svg {
+  width: 18px;
+  height: 18px;
+}
+
+.order.is-active .order-edge {
+  font-size: 13px;
+}
+
+.order.is-active .order-edge svg {
+  width: 24px;
+  height: 24px;
+}
+
+.order-edge[data-edge="right"] svg  { transform: rotate(90deg); }
+.order-edge[data-edge="bottom"] svg { transform: rotate(180deg); }
+.order-edge[data-edge="left"] svg   { transform: rotate(270deg); }
+
+/* The label only on the active order; the arrows say enough for the queue. */
+.order:not(.is-active) .order-edge-label {
+  display: none;
+}
+
+.dispatch-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.dispatch-status {
+  display: flex;
+  gap: 14px;
+}
+
+.dispatch-status b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.dispatch-next {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.next-label {
+  margin-right: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.next-chip {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+/* ---- bays ----
+   The two middle cells of the ordered edge light up in the order's colour, and
+   a bar in the board's margin marks the edge they ship through. */
+
+.grid-cell.is-bay {
+  background: color-mix(in srgb, var(--c) 22%, var(--cell-empty));
+  box-shadow: inset 0 0 0 3px var(--c);
+}
+
+.bay-bar {
+  position: absolute;
+  z-index: 1;
+  display: none;
+  border-radius: 999px;
+  background: var(--c);
+  pointer-events: none;
+}
+
+.bay-bar[data-edge] {
+  display: block;
+}
+
+/* Cells sit at 3% / 27.25% / 51.5% / 75.75% and are 21.25% wide, so the middle
+   pair spans 27.25% to 72.75%; the bar sits in the 3% margin outside them. */
+.bay-bar[data-edge="top"],
+.bay-bar[data-edge="bottom"] {
+  left: 27.25%;
+  width: 45.5%;
+  height: 1.4%;
+}
+
+.bay-bar[data-edge="top"]    { top: 0.8%; }
+.bay-bar[data-edge="bottom"] { bottom: 0.8%; }
+
+.bay-bar[data-edge="left"],
+.bay-bar[data-edge="right"] {
+  top: 27.25%;
+  height: 45.5%;
+  width: 1.4%;
+}
+
+.bay-bar[data-edge="left"]  { left: 0.8%; }
+.bay-bar[data-edge="right"] { right: 0.8%; }
+
+/* ---- shipping ----
+   The shipped tile slides into its bay like any other, then leaves through the
+   edge. The delay lets the slide land first. */
+
+.tile.tile-shipping {
+  z-index: 20;
+}
+
+.tile .tile-inner.is-shipping {
+  animation: 300ms cubic-bezier(0.5, 0, 0.9, 0.5) var(--slide) forwards;
+}
+
+.tile-inner.is-shipping[data-edge="top"]    { animation-name: ship-top; }
+.tile-inner.is-shipping[data-edge="bottom"] { animation-name: ship-bottom; }
+.tile-inner.is-shipping[data-edge="left"]   { animation-name: ship-left; }
+.tile-inner.is-shipping[data-edge="right"]  { animation-name: ship-right; }
+
+@keyframes ship-top    { to { transform: translateY(-120%) scale(0.8); opacity: 0; } }
+@keyframes ship-bottom { to { transform: translateY(120%) scale(0.8);  opacity: 0; } }
+@keyframes ship-left   { to { transform: translateX(-120%) scale(0.8); opacity: 0; } }
+@keyframes ship-right  { to { transform: translateX(120%) scale(0.8);  opacity: 0; } }
+
+/* ---- footer ---- */
+
+.dispatch-rules {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.dispatch-foot {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+.dispatch-foot a {
+  color: inherit;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile .tile-inner.is-shipping {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}

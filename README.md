@@ -232,6 +232,29 @@ criterion. The usual causes are a non-HTTPS origin, a service worker that failed
 to register, or a stale `manifest.webmanifest` — the worker serves it
 network-first, so reload twice.
 
+## Dispatch, a harder spinoff (prototype)
+
+`app/dispatch/` is a second game on the same engine, reached from the link under
+the classic board. Classic asks for the biggest tile; Dispatch asks for the right
+one. Tiles slide and merge exactly as in 2048, but there is always an order — a
+value and an edge, like "32 → left" — and a tile of that value that ends a swipe
+in one of the edge's two middle cells ships off the board. Eight orders, 100
+turns; 100 points a shipment, plus the unused turns if all eight ship. Merges
+score nothing, so a 64 made when the order wants a 32 is an obstacle, not
+progress.
+
+Every run is seeded by the date and nothing is random at play time: the orders,
+and each turn's incoming tile and where it lands, follow from the seed and the
+turn number. On a given day both players face the same run, so the numbers are
+comparable. Only the middle two cells of an edge count as bays, so a tile parked
+in a corner cannot quietly serve two edges.
+
+It keeps its own saved run and best score (`dispatch-state`, `dispatch-best`) and
+is not on the leaderboard yet. `node tools/test_dispatch.js` runs the rule tests;
+`--sim` plays 60 days with a lookahead bot. At 100 turns the bot finishes 56 of
+60 runs using about 94 turns: incoming tiles add roughly 2.2 of value a turn and
+the orders need 192, so the run is an economy of value more than a race.
+
 ## The leaderboard
 
 Two players, one shared table. It is deliberately the smallest thing that works:
