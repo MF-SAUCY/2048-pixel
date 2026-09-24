@@ -18,6 +18,12 @@
  *   board cannot prove who posted a score — with two players who know each
  *   other that is the right trade, and it is why nothing here is presented as
  *   authoritative.
+ *
+ *   Two boards, one row per player. On the classic page it shows best scores and
+ *   2048 / 4096 counts; on the Dispatch page it shows today's run (the first
+ *   attempt of the day, which dispatch.js records), with all-time bests and
+ *   full runs under it. Each page writes only its own columns, and the upsert
+ *   leaves the other page's columns as they were.
  */
 
 (function () {
@@ -25,7 +31,11 @@
 
   var ID_KEY = "2048-player-id";
   var NAME_KEY = "2048-player-name";
-  var PENDING_KEY = "2048-pending-score";
+  var MODE = document.querySelector(".dispatch") ? "dispatch" : "classic";
+  var PENDING_KEYS = {
+    classic: "2048-pending-score",
+    dispatch: "2048-pending-dispatch"
+  };
   var WINS_2048_KEY = "2048-wins-2048";
   var WINS_4096_KEY = "2048-wins-4096";
   var GAME_TOP_KEY = "2048-game-top";
@@ -39,6 +49,8 @@
   var panel = null;
   var listEl = null;
   var mine = { best: 0, games: 0, bestTile: 0, wins2048: 0, wins4096: 0 };
+  var run = { day: null, score: 0, shipped: 0, done: false, best: 0, runs: 0 };
+  var footEl = null;
   var writeTimer = null;
   var refreshTimer = null;
 
@@ -93,8 +105,9 @@
 
   function fetchBoard() {
     return fetch(endpoint("scores?select=player_id,name,best,games,best_tile," +
-                          "wins_2048,wins_4096" +
-                          "&order=best.desc&limit=20"), {
+                          "wins_2048,wins_4096,dispatch_day,dispatch_score," +
+                          "dispatch_shipped,dispatch_done,dispatch_best," +
+                          "dispatch_runs&order=best.desc&limit=20"), {
       headers: headers({ Accept: "application/json" }),
       cache: "no-store"
     }).then(function (r) {
@@ -120,6 +133,18 @@
   /* ---- syncing ---- */
 
   function currentRow() {
+    if (MODE === "dispatch") {
+      return {
+        player_id: playerId,
+        name: playerName || "Player",
+        dispatch_day: run.day,
+        dispatch_score: run.score,
+        dispatch_shipped: run.shipped,
+        dispatch_done: run.done,
+        dispatch_best: run.best,
+        dispatch_runs: run.runs
+      };
+    }
     return {
       player_id: playerId,
       name: playerName || "Player",
@@ -131,24 +156,32 @@
     };
   }
 
+  // One queued row per page, so an offline classic result and an offline
+  // Dispatch result do not overwrite each other.
   function queue(row) {
-    write(PENDING_KEY, JSON.stringify(row));
+    write(PENDING_KEYS[MODE], JSON.stringify(row));
   }
 
-  function flush() {
-    var raw = read(PENDING_KEY);
+  function flushKey(key) {
+    var raw = read(key);
     if (!raw) return Promise.resolve();
     var row;
     try {
       row = JSON.parse(raw);
     } catch (e) {
-      write(PENDING_KEY, null);
+      write(key, null);
       return Promise.resolve();
     }
     return pushScore(row).then(function () {
-      write(PENDING_KEY, null);
+      write(key, null);
     }, function () {
       /* still offline; keep it for next time */
+    });
+  }
+
+  function flush() {
+    return flushKey(PENDING_KEYS.classic).then(function () {
+      return flushKey(PENDING_KEYS.dispatch);
     });
   }
 
@@ -189,6 +222,13 @@
   // (a count set by hand in the dashboard, say) take the table's number rather
   // than overwriting it with a smaller one on the next write.
   function adopt(row) {
+    if (MODE === "dispatch") {
+      run.best = Math.max(run.best, row.dispatch_best || 0);
+      run.runs = Math.max(run.runs, row.dispatch_runs || 0);
+      write("dispatch-first-best", String(run.best));
+      write("dispatch-full-runs", String(run.runs));
+      return;
+    }
     mine.best = Math.max(mine.best, row.best || 0);
     mine.games = Math.max(mine.games, row.games || 0);
     mine.bestTile = Math.max(mine.bestTile, row.best_tile || 0);
@@ -221,6 +261,74 @@
     return '<span class="lb-badges">' + badges.join("") + "</span>";
   }
 
+  /* ---- Dispatch board ---- */
+
+  function today() {
+    return window.Dispatch ? window.Dispatch.todaySeed() : null;
+  }
+
+  function loadRun() {
+    var record = null;
+    try {
+      record = JSON.parse(read("dispatch-first") || "null");
+    } catch (e) {
+      record = null;
+    }
+    if (record) {
+      run.day = record.seed;
+      run.score = record.score || 0;
+      run.shipped = record.shipped || 0;
+      run.done = !!record.done;
+    }
+    run.best = Math.max(run.best, parseInt(read("dispatch-first-best") || "0", 10) || 0);
+    run.runs = Math.max(run.runs, parseInt(read("dispatch-full-runs") || "0", 10) || 0);
+  }
+
+  function playedToday(r) {
+    return !!r.dispatch_day && r.dispatch_day === today();
+  }
+
+  function runChip(r) {
+    var total = window.Dispatch ? window.Dispatch.ORDER_COUNT : 8;
+    if (!playedToday(r)) return '<span class="lb-none">not played yet</span>';
+    var full = r.dispatch_done && r.dispatch_shipped === total;
+    // An attempt still in progress shows where it stands, with a trailing
+    // ellipsis so it does not read as final.
+    return '<span class="lb-run' + (full ? " is-full" : "") + '">' +
+           r.dispatch_shipped + "/" + total + (full ? " \u2713" : "") +
+           (r.dispatch_done ? "" : " \u2026") + "</span>";
+  }
+
+  function renderDispatch(rows) {
+    rows.sort(function (a, b) {
+      var sa = playedToday(a) ? (a.dispatch_score || 0) : -1;
+      var sb = playedToday(b) ? (b.dispatch_score || 0) : -1;
+      return sb - sa;
+    });
+
+    listEl.innerHTML = rows.map(function (r, i) {
+      var isMine = r.player_id === playerId;
+      return '<li class="lb-row' + (isMine ? " is-me" : "") + '">' +
+             '<span class="lb-rank">' + (i + 1) + "</span>" +
+             '<span class="lb-name">' + esc(r.name || "Player") + "</span>" +
+             runChip(r) +
+             '<span class="lb-score">' +
+               (playedToday(r) ? (r.dispatch_score || 0).toLocaleString() : "\u2014") +
+             "</span></li>";
+    }).join("");
+
+    if (footEl) {
+      var byBest = rows.slice().sort(function (a, b) {
+        return (b.dispatch_best || 0) - (a.dispatch_best || 0);
+      });
+      footEl.textContent = "Best ever: " + byBest.map(function (r) {
+        return (r.name || "Player") + " " + (r.dispatch_best || 0).toLocaleString();
+      }).join(" \u00b7 ") + " \u00b7 Full runs: " + byBest.map(function (r) {
+        return r.dispatch_runs || 0;
+      }).join(" \u2013 ");
+    }
+  }
+
   function render(rows) {
     if (!listEl) return;
 
@@ -246,8 +354,13 @@
         return r;
       });
       if (!seen) rows.push(currentRow());
-      rows.sort(function (a, b) { return (b.best || 0) - (a.best || 0); });
     }
+
+    if (MODE === "dispatch") {
+      renderDispatch(rows);
+      return;
+    }
+    rows.sort(function (a, b) { return (b.best || 0) - (a.best || 0); });
 
     listEl.innerHTML = rows.map(function (r, i) {
       var isMine = r.player_id === playerId;
@@ -299,8 +412,21 @@
 
     panel = document.createElement("section");
     panel.className = "leaderboard";
-    panel.innerHTML =
-      '<h2 class="lb-title">Leaderboard</h2><ol class="lb-list"></ol>';
+    if (MODE === "dispatch") {
+      var parts = (today() || "").split("-");
+      var label = parts.length === 3
+        ? new Date(+parts[0], +parts[1] - 1, +parts[2]).toLocaleDateString(undefined, {
+            weekday: "short", month: "short", day: "numeric"
+          })
+        : "";
+      panel.innerHTML =
+        '<h2 class="lb-title"><span>Today\u2019s run</span><span>' + esc(label) +
+        '</span></h2><ol class="lb-list"></ol><p class="lb-foot"></p>';
+      footEl = panel.querySelector(".lb-foot");
+    } else {
+      panel.innerHTML =
+        '<h2 class="lb-title">Leaderboard</h2><ol class="lb-list"></ol>';
+    }
     board.parentNode.insertBefore(panel, board.nextSibling);
     listEl = panel.querySelector(".lb-list");
     return true;
@@ -393,7 +519,17 @@
     mine.wins4096 = parseInt(read(WINS_4096_KEY) || "0", 10) || 0;
 
     if (!build()) return;
-    hook();
+    if (MODE === "dispatch") {
+      // Only Dispatch's own result: the classic hook would read Dispatch
+      // boards as classic games and credit their scores and tiles there.
+      loadRun();
+      document.addEventListener("dispatch:result", function () {
+        loadRun();
+        syncSoon();
+      });
+    } else {
+      hook();
+    }
     render(null);
     refresh();
 

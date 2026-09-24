@@ -1,10 +1,15 @@
 /* Dispatch — layered on the classic stylesheet, which supplies the board,
    tiles, colour ramp, themes and fonts. Only what Dispatch adds lives here. */
 
-/* Heading, orders panel, rules and game switch, measured in the browser. */
+/* Heading, orders panel, rules line and game switch, plus the leaderboard when
+   there is one; measured in the browser at 412px wide. The :has() rule has to
+   restate classic's, which it would otherwise lose to on specificity. */
 @media (min-height: 561px) {
   :root {
-    --chrome: 340px;
+    --chrome: 328px;
+  }
+  :root:has(.leaderboard) {
+    --chrome: 460px;
   }
 }
 
@@ -224,15 +229,57 @@
 @keyframes ship-left   { to { transform: translateX(-120%) scale(0.8); opacity: 0; } }
 @keyframes ship-right  { to { transform: translateX(120%) scale(0.8);  opacity: 0; } }
 
-/* ---- footer ---- */
+/* ---- leaderboard: today's run ---- */
 
-.dispatch-day {
+.dispatch .lb-title {
+  display: flex;
+  justify-content: space-between;
+}
+
+.lb-run {
+  justify-self: end;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.14);
+  font-size: 12px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.dispatch-day::after {
-  content: " \00b7";
+/* A full run: the green from the ramp's 64, fixed so it reads as "done" in
+   both palettes. */
+.lb-run.is-full {
+  background: #00db97;
+  color: #241f1a;
 }
+
+.lb-none {
+  justify-self: end;
+  font-size: 12px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.lb-foot {
+  margin: 2px 0 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.practice-tag {
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--board-bg);
+  color: var(--ink-light);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---- footer ---- */
 
 .dispatch-rules {
   margin: 0;
