@@ -32,7 +32,7 @@ Today's Dispatch run is a **dead tie** — see "Open" below.
 ## Shipping a change
 
 1. Edit under `app/`. Run `node tools/test_dispatch.js` if Dispatch was
-   touched (19 tests; `--sim` adds the 60-day bot run, ~10 s).
+   touched (24 tests; `--sim` adds the 60-day bot run, ~10 s).
 2. Commit. The pre-commit hook (`.githooks/pre-commit` → `tools/stamp_sw.py`)
    stamps `CACHE` in `app/sw.js` from a fingerprint of everything staged under
    `app/`. **Never bump it by hand.** A fresh clone needs
@@ -101,18 +101,20 @@ columns and the ALTERs used are in README → "The leaderboard".
 
 1. **Dispatch scoring ties.** Score = 100 per shipment + unused turns only on a
    full run, so partial runs tie on shipment count alone (today: 700–700).
-   Needs a tiebreak for partial runs — e.g. turns used when the last shipment
+   Less pressing since 2026-09-30: retries now count until a full run, so
+   most days end on full runs, which the unused turns separate. Still needs a
+   tiebreak for partial runs — e.g. turns used when the last shipment
    landed, or value still on the board. Decide with Joseph; it changes what
    posts, so the leaderboard shows the new score and maybe a new column.
 2. **Dispatch difficulty tuning.** Both players finish about half their runs
    (3 full runs each over ~6 days) and bests are 804–808, i.e. finishing with
-   4–8 turns spare — consistent with the sim (bot: 56/60 days, ~94 turns).
+   4–8 turns spare — consistent with the sim (bot: 57/60 days, ~94 turns).
    Levers: `TURN_LIMIT`, `LADDER` in `app/dispatch/dispatch.js`. Re-run
    `--sim` after changing them.
 3. **Dispatch only stores today.** No per-day history, so "who won yesterday"
    and streaks aren't possible yet. Would need a `dispatch_runs_log` table or
    more columns.
-4. **Midnight rollover.** An unfinished first attempt still open at midnight is
+4. **Midnight rollover.** An unfinished attempt still open at midnight is
    dropped when the page reloads next day (by design, but untested with real
    use).
 5. **Stale audit artifact:** https://claude.ai/artifact/8j5b3RhgbiktpPUzZTkrow

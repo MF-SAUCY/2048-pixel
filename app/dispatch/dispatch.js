@@ -6,7 +6,9 @@
  *   - There is always one order: a value and an edge, e.g. "32 -> top". The two
  *     middle cells of that edge are its loading bays. When a swipe ends with a
  *     tile of the ordered value sitting in a bay, it ships: it leaves the board
- *     and the next order becomes active. One shipment per swipe.
+ *     and the next order becomes active. If a tile of that next order's value is
+ *     already waiting in one of its bays, it ships too, on the same swipe, and
+ *     so on down the list.
  *   - The next two orders are always shown, as are the next three incoming
  *     tiles.
  *   - A run is 8 orders within 100 turns. A turn is any swipe that moves a tile
@@ -26,12 +28,14 @@
  * does not quietly qualify for two edges at once: delivering means bringing it
  * out.
  *
- * The first run of the day is the one that counts. Restart replays the same
- * run, and every tile arrives exactly where it did before, so a second go is
- * played with foreknowledge; it is marked Practice and never posts. The first
- * attempt ends when the run does, or when it is restarted after any move. Its
- * result is kept in `records` (localStorage in the app) and announced through
- * onResult, which the leaderboard listens to.
+ * The first full run of the day is the one that counts. Until a run ships all
+ * 8, every attempt counts toward the day, and the day's result is the best
+ * attempt so far: a worse retry never lowers it, and ties go to the earlier
+ * one. An attempt ends when the run does, or when it is restarted after any
+ * move. Restart replays the same run with every tile arriving where it did
+ * before, so once a full run is in, later goes are marked Practice and never
+ * post. The day's result is kept in `records` (localStorage in the app) and
+ * announced through onResult, which the leaderboard listens to.
  *
  * The movement code is upstream's GameManager, borrowed method by method, so a
  * swipe behaves exactly as it does in the classic game.
@@ -189,15 +193,14 @@
     }
 
     this.orders = makeOrders(this.seed);
-    var first = this.firstRecord();
-    this.attempt = first && first.seed === this.seed && first.done ? "practice" : "first";
-    this.shipment = null;
+    this.attempt = this.dayLocked() ? "practice" : "counting";
+    this.shipments = [];
     this.actuate();
   };
 
   DispatchManager.prototype.restart = function () {
-    // Restarting the counted run after any move ends it where it stands.
-    if (this.attempt === "first" && this.turn > 0) this.recordFirst(true);
+    // Restarting a counting attempt after any move ends it where it stands.
+    if (this.attempt === "counting" && this.turn > 0) this.recordRun(true);
     if (this.storage) this.storage.clearGameState();
     if (this.actuator) this.actuator.continueGame();
     this.setup();
@@ -243,7 +246,7 @@
     var moved = false;
 
     this.prepareTiles();
-    this.shipment = null;
+    this.shipments = [];
 
     traversals.x.forEach(function (x) {
       traversals.y.forEach(function (y) {
@@ -271,11 +274,14 @@
     var cargo = this.findShipment();
     if (!moved && !cargo) return;
 
-    if (cargo) {
+    // Each shipment opens the next order, and a tile already waiting in that
+    // order's bay ships straight away, so one swipe can clear several orders.
+    while (cargo) {
       this.grid.removeTile(cargo);
-      this.shipment = { tile: cargo, edge: this.activeOrder().edge };
+      this.shipments.push({ tile: cargo, edge: this.activeOrder().edge });
       this.shipped += 1;
       this.score += SHIP_POINTS;
+      cargo = this.findShipment();
     }
 
     this.turn += 1;
@@ -318,15 +324,24 @@
     return out;
   };
 
-  /* ---- the first attempt of the day ---- */
+  /* ---- the day's result ---- */
 
-  DispatchManager.prototype.firstRecord = function () {
+  // The keys keep their "dispatch-first" names from when only the first
+  // attempt counted, so records saved before the change still read.
+  DispatchManager.prototype.dayRecord = function () {
     if (!this.records) return null;
     try {
-      return JSON.parse(this.records.get("dispatch-first") || "null");
+      var record = JSON.parse(this.records.get("dispatch-first") || "null");
+      return record && record.seed === this.seed ? record : null;
     } catch (e) {
       return null;
     }
+  };
+
+  // A full run is the day's result for good; everything after it is practice.
+  DispatchManager.prototype.dayLocked = function () {
+    var record = this.dayRecord();
+    return !!record && record.shipped === ORDER_COUNT;
   };
 
   DispatchManager.prototype.totals = function () {
@@ -336,32 +351,38 @@
     return { best: get("dispatch-first-best"), runs: get("dispatch-full-runs") };
   };
 
-  DispatchManager.prototype.recordFirst = function (ending) {
+  DispatchManager.prototype.recordRun = function (ending) {
     if (!this.records) return;
-    var previous = this.firstRecord();
+    var previous = this.dayRecord();
+    // An unfinished record can only be this attempt's own, so it keeps
+    // updating. A finished one from an earlier attempt gives way only to a
+    // higher score, and a full run never does.
+    if (previous && previous.done &&
+        (previous.shipped === ORDER_COUNT || this.score <= previous.score)) return;
+
     var done = ending || this.isGameTerminated();
     var record = {
       seed: this.seed,
       score: this.score,
       shipped: this.shipped,
-      done: done,
-      counted: !!(previous && previous.seed === this.seed && previous.counted)
+      done: done
     };
 
     var totals = this.totals();
     if (this.score > totals.best) {
       this.records.set("dispatch-first-best", String(this.score));
     }
-    if (done && this.shipped === ORDER_COUNT && !record.counted) {
+    // Once per day: the record is full from here on, and a full record is
+    // never written again.
+    if (done && this.shipped === ORDER_COUNT) {
       this.records.set("dispatch-full-runs", String(totals.runs + 1));
-      record.counted = true;
     }
     this.records.set("dispatch-first", JSON.stringify(record));
     if (this.onResult) this.onResult(record, this.totals());
   };
 
   DispatchManager.prototype.actuate = function () {
-    if (this.attempt === "first" && this.turn > 0) this.recordFirst(false);
+    if (this.attempt === "counting" && this.turn > 0) this.recordRun(false);
 
     var best = 0;
     if (this.storage) {
@@ -387,7 +408,7 @@
       shipped: this.shipped,
       turnsLeft: TURN_LIMIT - this.turn,
       upcoming: this.upcomingSupply(3),
-      shipment: this.shipment,
+      shipments: this.shipments,
       attempt: this.attempt
     });
   };
@@ -428,7 +449,14 @@
     HTMLActuator.prototype.actuate.call(this, grid, meta);
 
     window.requestAnimationFrame(function () {
-      if (meta.shipment) self.addShipment(meta.shipment);
+      meta.shipments.forEach(self.addShipment, self);
+      if (meta.shipments.length) {
+        try {
+          if (navigator.vibrate) navigator.vibrate([10, 40, 18]);
+        } catch (e) {
+          /* haptics refused */
+        }
+      }
       self.renderOrders(meta);
       self.renderBays(meta);
       self.renderStatus(meta);
@@ -452,11 +480,6 @@
         inner.classList.add("is-shipping");
       }
     });
-    try {
-      if (navigator.vibrate) navigator.vibrate([10, 40, 18]);
-    } catch (e) {
-      /* haptics refused */
-    }
   };
 
   DispatchActuator.prototype.renderOrders = function (meta) {
@@ -504,7 +527,7 @@
       "<span><b>" + meta.shipped + "</b>/" + meta.orders.length + " shipped</span>" +
       "<span><b>" + meta.turnsLeft + "</b> turns left</span>" +
       (meta.attempt === "practice"
-        ? '<span class="practice-tag" title="The first run of the day already counted">Practice</span>'
+        ? '<span class="practice-tag" title="Today’s full run already counted">Practice</span>'
         : "");
 
     this.nextEl.innerHTML = meta.upcoming.length
@@ -547,7 +570,7 @@
     if (root.Dispatch.game) return root.Dispatch.game;
 
     // Restart confirms after any move, not only once there is a score: here a
-    // restart also ends the run that counts.
+    // restart also ends a counting attempt.
     if (root.KeyboardInputManager) {
       root.KeyboardInputManager.prototype.hasProgress = function () {
         var game = root.Dispatch.game;

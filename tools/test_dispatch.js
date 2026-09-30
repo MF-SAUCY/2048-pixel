@@ -142,20 +142,68 @@ test("a swipe that neither moves nor ships is not a turn", () => {
   assert.strictEqual(g.turn, 0);
 });
 
-test("one shipment per swipe, even with both bays holding the value", () => {
+test("a tile already waiting in the next order's bay ships on the same swipe", () => {
+  const g = game("t");
+  g.orders[0] = { value: 8, edge: "top" };
+  g.orders[1] = { value: 16, edge: "right" };
+  g.orders[2] = { value: 32, edge: "bottom" };
+  clearBoard(g);
+  place(g, 1, 3, 8);
+  place(g, 3, 0, 2);  // holds the 16 in its bay through the swipe up
+  place(g, 3, 1, 16);
+  g.move(UP);
+  assert.strictEqual(g.shipped, 2);
+  assert.strictEqual(g.score, 200);
+  assert.strictEqual(g.turn, 1, "one turn for the whole chain");
+  assert.strictEqual(g.grid.cellContent({ x: 3, y: 1 }), null, "the waiting 16 left the board");
+  same(g.shipments.map((s) => [s.tile.value, s.edge]), [[8, "top"], [16, "right"]]);
+});
+
+test("the chain runs on while each next order is waiting, and stops at the first that isn't", () => {
   const g = game("t");
   g.orders[0] = { value: 8, edge: "top" };
   g.orders[1] = { value: 8, edge: "top" };
-  clearBoard(g);
-  place(g, 1, 0, 8);
-  place(g, 2, 0, 8);
-  g.move(DOWN); // both slide down: nothing in the top bays now
-  assert.strictEqual(g.shipped, 0);
+  g.orders[2] = { value: 16, edge: "left" };
+  g.orders[3] = { value: 32, edge: "right" };
   clearBoard(g);
   place(g, 1, 1, 8);
   place(g, 2, 1, 8);
+  place(g, 0, 0, 2);
+  place(g, 0, 1, 16);
+  place(g, 3, 3, 32); // right edge, but in a corner: not a bay
+  g.move(UP);
+  assert.strictEqual(g.shipped, 3);
+  assert.strictEqual(g.grid.cellContent({ x: 3, y: 0 }).value, 32, "the 32 stays");
+});
+
+test("a tile waiting for a later order does not jump the queue", () => {
+  const g = game("t");
+  g.orders[0] = { value: 8, edge: "top" };
+  g.orders[1] = { value: 16, edge: "left" };
+  g.orders[2] = { value: 32, edge: "right" };
+  clearBoard(g);
+  place(g, 1, 3, 8);
+  place(g, 3, 0, 2);
+  place(g, 3, 1, 32);
   g.move(UP);
   assert.strictEqual(g.shipped, 1);
+  assert.strictEqual(g.grid.cellContent({ x: 3, y: 1 }).value, 32);
+});
+
+test("a chain that clears the last order wins", () => {
+  const g = game("t");
+  g.shipped = 6;
+  g.score = 600;
+  g.turn = 50;
+  g.orders[6] = { value: 32, edge: "top" };
+  g.orders[7] = { value: 64, edge: "right" };
+  clearBoard(g);
+  place(g, 1, 3, 32);
+  place(g, 3, 0, 2);
+  place(g, 3, 1, 64);
+  g.move(UP);
+  assert.strictEqual(g.won, true);
+  assert.strictEqual(g.score, 800 + (D.TURN_LIMIT - 51));
 });
 
 test("each turn's tile lands in the first free cell of that turn's fixed order", () => {
@@ -205,7 +253,7 @@ test("a saved run reloads only on its own day", () => {
   assert.strictEqual(game("2026-09-24", state).turn, 0);
 });
 
-/* ---- the first attempt of the day ---- */
+/* ---- the day's result ---- */
 
 function memoryRecords() {
   const data = {};
@@ -237,74 +285,104 @@ function shipOne(g) {
   g.move(dir);
 }
 
-test("the first run of the day records as it goes, and posts nothing before a move", () => {
+const record = (p) => JSON.parse(p.records.data["dispatch-first"]);
+
+test("a counting run records as it goes, and posts nothing before a move", () => {
   const p = player("2026-09-24");
   const g = p.open();
-  assert.strictEqual(g.attempt, "first");
+  assert.strictEqual(g.attempt, "counting");
   assert.strictEqual(p.results.length, 0, "opening the page is not a result");
   shipOne(g);
-  const rec = JSON.parse(p.records.data["dispatch-first"]);
-  same(rec, { seed: "2026-09-24", score: 100, shipped: 1, done: false, counted: false });
+  same(record(p), { seed: "2026-09-24", score: 100, shipped: 1, done: false });
 });
 
-test("restarting after a move ends the first attempt; the next run is practice", () => {
+test("restarting after a move ends the attempt; the next one still counts", () => {
   const p = player("2026-09-24");
   const g = p.open();
   shipOne(g);
   g.restart();
-  assert.strictEqual(g.attempt, "practice");
-  const rec = JSON.parse(p.records.data["dispatch-first"]);
-  assert.strictEqual(rec.done, true);
-  assert.strictEqual(rec.shipped, 1);
+  assert.strictEqual(g.attempt, "counting");
+  same(record(p), { seed: "2026-09-24", score: 100, shipped: 1, done: true });
   shipOne(g);
+  same(record(p), { seed: "2026-09-24", score: 100, shipped: 1, done: true }, "a tie keeps the earlier attempt");
   shipOne(g);
-  assert.strictEqual(JSON.parse(p.records.data["dispatch-first"]).shipped, 1, "practice never posts");
-  assert.strictEqual(p.open().attempt, "practice", "still practice after reopening");
+  same(record(p), { seed: "2026-09-24", score: 200, shipped: 2, done: false }, "a better attempt takes over live");
+  assert.strictEqual(p.open().attempt, "counting", "still counting after reopening");
 });
 
-test("restarting before any move keeps the first attempt", () => {
+test("a worse retry never lowers the day's result", () => {
+  const p = player("2026-09-24");
+  const g = p.open();
+  for (let i = 0; i < 3; i++) shipOne(g);
+  g.restart();
+  shipOne(g);
+  g.restart();
+  same(record(p), { seed: "2026-09-24", score: 300, shipped: 3, done: true });
+  assert.strictEqual(p.records.data["dispatch-first-best"], "300");
+});
+
+test("restarting before any move posts nothing", () => {
   const p = player("2026-09-24");
   const g = p.open();
   g.restart();
-  assert.strictEqual(g.attempt, "first");
+  assert.strictEqual(g.attempt, "counting");
   assert.strictEqual(p.records.data["dispatch-first"], undefined);
 });
 
-test("reopening mid-run carries on with the first attempt", () => {
+test("reopening mid-run carries on with the same attempt", () => {
   const p = player("2026-09-24");
   shipOne(p.open());
   const again = p.open();
-  assert.strictEqual(again.attempt, "first");
+  assert.strictEqual(again.attempt, "counting");
   assert.strictEqual(again.shipped, 1);
 });
 
-test("a full first run counts once toward full runs and sets the best", () => {
+test("the first full run locks the day; later runs are practice", () => {
   const p = player("2026-09-24");
   const g = p.open();
+  for (let i = 0; i < 5; i++) shipOne(g);
+  g.restart();
+  assert.strictEqual(g.attempt, "counting");
   for (let i = 0; i < 8; i++) shipOne(g);
   assert.strictEqual(g.won, true);
-  const rec = JSON.parse(p.records.data["dispatch-first"]);
-  assert.strictEqual(rec.done, true);
+  const full = record(p);
+  assert.strictEqual(full.shipped, 8);
+  assert.strictEqual(full.done, true);
   assert.strictEqual(p.records.data["dispatch-full-runs"], "1");
   assert.strictEqual(p.records.data["dispatch-first-best"], String(g.score));
   g.restart();
+  assert.strictEqual(g.attempt, "practice");
+  same(record(p), full, "restarting a finished full run changes nothing");
   for (let i = 0; i < 8; i++) shipOne(g);
+  same(record(p), full, "practice never posts");
   assert.strictEqual(p.records.data["dispatch-full-runs"], "1", "a practice win does not count");
-  p.open();
+  assert.strictEqual(p.open().attempt, "practice", "still practice after reopening");
   assert.strictEqual(p.records.data["dispatch-full-runs"], "1", "reopening does not recount");
 });
 
-test("a new day is a new first attempt", () => {
+test("a record saved under the old first-attempt rule still reads", () => {
+  const p = player("2026-09-24");
+  p.records.set("dispatch-first", JSON.stringify(
+    { seed: "2026-09-24", score: 700, shipped: 7, done: true, counted: false }));
+  const g = p.open();
+  assert.strictEqual(g.attempt, "counting", "a finished 7/8 no longer ends the day");
+  for (let i = 0; i < 8; i++) shipOne(g);
+  assert.strictEqual(record(p).shipped, 8);
+  p.records.set("dispatch-first", JSON.stringify(
+    { seed: "2026-09-24", score: 812, shipped: 8, done: true, counted: true }));
+  assert.strictEqual(p.open().attempt, "practice");
+});
+
+test("a new day is a new counting run", () => {
   const storage = memoryStorage();
   const records = memoryRecords();
   let seed = "2026-09-24";
   const open = () => new D.DispatchManager({ storage, records, seedFor: () => seed });
   const g = open();
-  shipOne(g);
-  g.restart();
+  for (let i = 0; i < 8; i++) shipOne(g);
   assert.strictEqual(open().attempt, "practice");
   seed = "2026-09-25";
-  assert.strictEqual(open().attempt, "first");
+  assert.strictEqual(open().attempt, "counting");
 });
 
 console.log(`\n${passed} passed`);
