@@ -21,8 +21,8 @@
  *
  *   Two boards, one row per player. On the classic page it shows best scores and
  *   2048 / 4096 counts; on the Dispatch page it shows today's run (the first
- *   attempt of the day, which dispatch.js records), with all-time bests and
- *   full runs under it. Each page writes only its own columns, and the upsert
+ *   full run of the day, or the best attempt until there is one, which
+ *   dispatch.js records), with all-time bests and full runs under it. Each page writes only its own columns, and the upsert
  *   leaves the other page's columns as they were.
  */
 
