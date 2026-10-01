@@ -31,6 +31,7 @@
 
   var ID_KEY = "2048-player-id";
   var NAME_KEY = "2048-player-name";
+  var LINKED_KEY = "2048-linked";
   var MODE = document.querySelector(".dispatch") ? "dispatch" : "classic";
   var PENDING_KEYS = {
     classic: "2048-pending-score",
@@ -188,6 +189,9 @@
   function sync() {
     // No row until a name is saved; saving the name triggers the first sync.
     if (!configured || !playerId || !playerName) return;
+    // A freshly linked device knows nothing of today's Dispatch run until it
+    // has read its row, and would otherwise blank the row's result.
+    if (MODE === "dispatch" && read(LINKED_KEY)) return;
     queue(currentRow());
     flush().then(refresh, refresh);
   }
@@ -223,6 +227,7 @@
   // than overwriting it with a smaller one on the next write.
   function adopt(row) {
     if (MODE === "dispatch") {
+      if (read(LINKED_KEY)) adoptLinkedDay(row);
       run.best = Math.max(run.best, row.dispatch_best || 0);
       run.runs = Math.max(run.runs, row.dispatch_runs || 0);
       write("dispatch-first-best", String(run.best));
@@ -284,6 +289,23 @@
     run.runs = Math.max(run.runs, parseInt(read("dispatch-full-runs") || "0", 10) || 0);
   }
 
+  // A linked device takes its row's Dispatch result for today as its own,
+  // marked finished so only a better attempt replaces it; a full run locks the
+  // day here just as it did on the other phone. The page reloads so the game
+  // starts from it.
+  function adoptLinkedDay(row) {
+    write(LINKED_KEY, null);
+    if (row.dispatch_day !== today()) return;
+    write("dispatch-first", JSON.stringify({
+      seed: row.dispatch_day,
+      score: row.dispatch_score || 0,
+      shipped: row.dispatch_shipped || 0,
+      done: true
+    }));
+    write("dispatch-state", null);
+    location.reload();
+  }
+
   function playedToday(r) {
     return !!r.dispatch_day && r.dispatch_day === today();
   }
@@ -332,6 +354,16 @@
   function render(rows) {
     if (!listEl) return;
 
+    // A linked device that has no name yet takes its row's.
+    if (!playerName && rows) {
+      rows.forEach(function (r) {
+        if (r.player_id === playerId && r.name) {
+          playerName = r.name;
+          write(NAME_KEY, r.name);
+        }
+      });
+    }
+
     if (!playerName) {
       renderNamePrompt();
       return;
@@ -353,7 +385,11 @@
         }
         return r;
       });
-      if (!seen) rows.push(currentRow());
+      if (!seen) {
+        // Linked to an id with no row: there is nothing to take over.
+        if (MODE === "dispatch") write(LINKED_KEY, null);
+        rows.push(currentRow());
+      }
     }
 
     if (MODE === "dispatch") {
@@ -503,8 +539,28 @@
     };
   }
 
+  // A new phone mints its own id and so its own row. Opening the site once
+  // with ?link=<player id> moves the device onto an existing row instead. What
+  // this device held for its old id goes: its Dispatch run for today, which
+  // would overwrite the row's, and anything queued to post, which would
+  // recreate the old row. Counts and bests come down from the row on the next
+  // read. The page then reloads without the parameter.
+  function linkDevice() {
+    var match = /[?&]link=([0-9A-Za-z-]{8,64})(?:&|$)/.exec(location.search);
+    if (!match) return false;
+    write(ID_KEY, match[1]);
+    write(PENDING_KEYS.classic, null);
+    write(PENDING_KEYS.dispatch, null);
+    write("dispatch-first", null);
+    write("dispatch-state", null);
+    write(LINKED_KEY, "1");
+    location.replace(location.pathname + location.hash);
+    return true;
+  }
+
   function init() {
     if (!configured) return; // nothing to show, and nothing to fail
+    if (linkDevice()) return;
 
     playerId = read(ID_KEY);
     if (!playerId) {
