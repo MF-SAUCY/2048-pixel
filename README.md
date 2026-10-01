@@ -360,6 +360,17 @@ a personal best is beaten, coalesced so a finished game is one write. If the
 network is down the row is kept in `localStorage` and flushed on the next
 successful contact, so the installed app still records scores in airplane mode.
 
+### A new phone
+
+A new phone mints its own id, so it starts a second row. To move it onto the
+old one, open the site once on that phone (in Chrome; the installed app shares
+its storage) with the old row's `player_id` from Table Editor:
+`https://mf-saucy.github.io/2048-pixel/?link=<player_id>`. The phone takes that
+id, drops its own Dispatch run for today and anything queued to post, takes
+today's Dispatch result from the row, and adopts the row's name if it had none;
+counts and bests come down from the row as usual. Then delete the stray row in
+Table Editor, after the link is opened so a queued post cannot recreate it.
+
 ### What it does not do
 
 **It cannot prove who posted a score.** There is no sign-in: identity is a name
