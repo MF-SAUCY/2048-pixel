@@ -68,6 +68,13 @@ dialog: letting it lapse or swiping cancels it. It skips the question when there
 is nothing to lose — after game over, or before the first point — and the
 overlay's "Try again" never asks. The R key follows the same rule.
 
+**Up asks twice too (classic only).** In a game built against the bottom edge,
+one slip upward can wreck the board, so with `up_guard.js` the first up leaves
+the board alone and says "Swipe up again to move up"; a second up within three
+seconds moves. Any other move cancels the question and plays as usual, as does
+letting it lapse or starting a new game. It only asks when up would actually
+move a tile, and the up keys ask too. Dispatch doesn't load it.
+
 **A cool-to-warm tile ramp.** Upstream's five gold tiles (128→2048) vary almost
 nothing but the blue channel, so they land within 3.3 points of lightness and the
 closest pair measures **ΔE2000 2.18** — barely twice the smallest difference a

@@ -2,7 +2,7 @@
 
 The multi-file build in app/ is the real one — it is a PWA and it installs. This
 bundle exists for hosts that serve a single page (the Claude artifact host among
-them), so the markup, CSS and all nine scripts are inlined in load order.
+them), so the markup, CSS and the game scripts are inlined in load order.
 
 Fonts stay external: three .woff files are ~82KB that would grow by a third as
 base64, and they are referenced at the same relative path the app uses, so the
@@ -32,6 +32,7 @@ SCRIPTS = [
     "js/game_manager.js",
     "js/palette.js",
     "js/effects.js",
+    "js/up_guard.js",
     "js/application.js",
 ]
 
