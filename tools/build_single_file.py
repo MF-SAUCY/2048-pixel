@@ -33,6 +33,7 @@ SCRIPTS = [
     "js/palette.js",
     "js/effects.js",
     "js/up_guard.js",
+    "js/autofill.js",
     "js/application.js",
 ]
 

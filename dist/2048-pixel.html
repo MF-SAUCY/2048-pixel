@@ -109,11 +109,11 @@
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
      worth more than the margin. */
   --gutter: 12px;
-  /* Everything on the page but the board: heading, credit line, the game and
-     tile switches, the gaps between them and the container's padding. Measured
-     in the browser at 412px wide, not estimated; if it runs short, a screen
-     short enough for height to size the board cuts off the bottom rows. */
-  --chrome: 274px;
+  /* Everything on the page but the board: heading, the game, tile and
+     auto-fill switches, the gaps between them and the container's padding.
+     Measured in the browser at 412px wide, not estimated; if it runs short, a
+     screen short enough for height to size the board cuts off the bottom rows. */
+  --chrome: 281px;
   --board-cap: 560px;
 
   --avail-h: calc(100vh - var(--chrome));
@@ -142,7 +142,7 @@
 /* The leaderboard is injected only when a backend is configured, so its height
    is reserved only when it is really there. */
 :root:has(.leaderboard) {
-  --chrome: 382px; /* plus the leaderboard, measured at its taller name-entry state */
+  --chrome: 388px; /* plus the leaderboard, measured at its taller name-entry state */
 }
 
 /* Wide gamut. The ramp is drawn at high chroma the whole way round, and the
@@ -1002,21 +1002,10 @@ body,
 
 /* ---- footer ---- */
 
-.game-credit {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.5;
-  text-align: center;
-  color: var(--ink-muted);
-}
-
-.game-credit a {
-  color: inherit;
-}
-
-/* The game and palette switches sit under the credit line — a choice of game
-   and a preference, not moves. The game switch is plain links, since choosing
-   a game is going to another page. */
+/* The game, tile and auto-fill switches sit under the board, and under the
+   leaderboard when there is one — a choice of game and preferences, not moves.
+   The game switch is plain links, since choosing a game is going to another
+   page. There is no credit line: the MIT notice ships in LICENSE.txt. */
 .game-switch,
 .palette-switch {
   display: flex;
@@ -1079,7 +1068,6 @@ body,
   .container {
     gap: 8px;
   }
-  .game-credit,
   .game-switch,
   .palette-switch,
   .leaderboard {
@@ -1146,10 +1134,6 @@ body,
 
       <div class="tile-container"></div>
     </div>
-
-    <p class="game-credit">
-      Original game by <a href="https://play2048.co" rel="noopener">Gabriele Cirulli</a> — MIT licensed.
-    </p>
   </div>
 
 <script>
@@ -1273,7 +1257,8 @@ Function.prototype.bind = Function.prototype.bind || function (target) {
  * Keeps upstream's constructor name and its on("move"|"restart"|"keepPlaying")
  * interface, so game_manager.js and application.js are used unmodified.
  *
- * Three changes from upstream:
+ * Three changes from upstream, plus an opt-in hold-to-repeat for down (see
+ * downRepeat below):
  *   1. Swipes are read on the whole document, not just the board. On a phone
  *      the board is a small target and a swipe that starts on the heading or
  *      the margin should still move tiles.
@@ -1362,6 +1347,7 @@ KeyboardInputManager.prototype.listen = function () {
   var tracking = false;
 
   function begin(x, y, target) {
+    self.stopRepeat();
     if (self.isControl(target)) {
       tracking = false;
       return;
@@ -1371,7 +1357,24 @@ KeyboardInputManager.prototype.listen = function () {
     tracking = true;
   }
 
+  // With a page's downRepeat turned on, a down swipe moves the moment it
+  // passes the threshold, without waiting for the lift, and holding on
+  // repeats it.
+  function drag(x, y) {
+    var repeat = self.downRepeat;
+    if (!tracking || !repeat || !repeat.enabled()) return;
+    var dx = x - startX;
+    var dy = y - startY;
+    if (dy > self.swipeThreshold && dy > Math.abs(dx)) {
+      tracking = false; // this gesture is spoken for; the lift adds nothing
+      self.disarmRestart();
+      self.emit("move", 2);
+      self.startRepeat();
+    }
+  }
+
   function finish(x, y) {
+    self.stopRepeat();
     if (!tracking) return;
     tracking = false;
 
@@ -1393,6 +1396,11 @@ KeyboardInputManager.prototype.listen = function () {
       begin(event.clientX, event.clientY, event.target);
     });
 
+    document.addEventListener("pointermove", function (event) {
+      if (!event.isPrimary) return;
+      drag(event.clientX, event.clientY);
+    });
+
     document.addEventListener("pointerup", function (event) {
       if (!event.isPrimary) return;
       finish(event.clientX, event.clientY);
@@ -1400,6 +1408,7 @@ KeyboardInputManager.prototype.listen = function () {
 
     document.addEventListener("pointercancel", function () {
       tracking = false;
+      self.stopRepeat();
     });
   } else {
     document.addEventListener("touchstart", function (event) {
@@ -1417,6 +1426,7 @@ KeyboardInputManager.prototype.listen = function () {
 
     document.addEventListener("touchcancel", function () {
       tracking = false;
+      self.stopRepeat();
     });
   }
 
@@ -1424,7 +1434,34 @@ KeyboardInputManager.prototype.listen = function () {
   // on these gestures; this stops the rubber-band on engines that ignore it.
   document.addEventListener("touchmove", function (event) {
     if (tracking) event.preventDefault();
+    if (!window.PointerEvent && event.touches.length === 1) {
+      drag(event.touches[0].clientX, event.touches[0].clientY);
+    }
   }, { passive: false });
+};
+
+/* Hold-to-repeat for down. Off unless a page sets downRepeat to
+ * { enabled: fn, moved: fn }, as autofill.js does on the classic page. After a
+ * short pause, a held down swipe repeats until the finger lifts or a down move
+ * changes nothing, so it only ever plays moves a fresh swipe would. */
+KeyboardInputManager.prototype.downRepeat = null;
+KeyboardInputManager.prototype.repeatDelayMs = 350;
+KeyboardInputManager.prototype.repeatEveryMs = 200;
+
+KeyboardInputManager.prototype.startRepeat = function () {
+  var self = this;
+  this.stopRepeat();
+  this.repeatTimer = setTimeout(function tick() {
+    var repeat = self.downRepeat;
+    if (!repeat || !repeat.enabled() || !repeat.moved()) return;
+    self.emit("move", 2);
+    self.repeatTimer = setTimeout(tick, self.repeatEveryMs);
+  }, this.repeatDelayMs);
+};
+
+KeyboardInputManager.prototype.stopRepeat = function () {
+  clearTimeout(this.repeatTimer);
+  this.repeatTimer = null;
 };
 
 KeyboardInputManager.prototype.restart = function (event) {
@@ -2169,8 +2206,11 @@ GameManager.prototype.positionsEqual = function (first, second) {
     var current = stored();
     apply(current);
 
-    var footer = document.querySelector(".game-credit");
-    if (!footer || !footer.parentNode) return;
+    // Under the Classic / Dispatch switch when the page has one, so the two
+    // preferences sit together; otherwise (the single-file bundle) at the foot.
+    var anchor = document.querySelector(".game-switch");
+    var container = document.querySelector(".container");
+    if (!anchor && !container) return;
 
     var wrap = document.createElement("div");
     wrap.className = "palette-switch";
@@ -2217,10 +2257,11 @@ GameManager.prototype.positionsEqual = function (first, second) {
     render();
     wrap.appendChild(label);
     wrap.appendChild(group);
-    // Under the Classic / Dispatch switch when the page has one, so the two
-    // preferences sit together.
-    var anchor = document.querySelector(".game-switch") || footer;
-    anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+    if (anchor) {
+      anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+    } else {
+      container.appendChild(wrap);
+    }
   }
 
   if (document.readyState === "loading") {
@@ -2588,6 +2629,136 @@ GameManager.prototype.positionsEqual = function (first, second) {
     disarm();
     restart.call(this);
   };
+})();
+
+/* ---- js/autofill.js ---- */
+/* Auto-fill, classic only: hold a down swipe to keep dropping tiles.
+ *
+ * With the switch on, a down swipe moves as soon as it passes the swipe
+ * distance, and holding on repeats it about five times a second (the
+ * gesture itself lives in input_manager.js, as downRepeat). It is a shortcut
+ * for swiping down over and over, not a way to summon tiles: the hold stops
+ * the moment a down move changes nothing, because a real swipe there would
+ * not bring a tile in either. Other gestures are untouched.
+ *
+ * The switch sits under Tiles, in the same style, and is remembered per
+ * device. Off by default.
+ *
+ * Wraps GameManager.prototype.move and actuate to learn whether the last move
+ * did anything: upstream only actuates after a move that changed the board.
+ * Loaded before application.js, which binds move once, at construction.
+ */
+
+(function () {
+  "use strict";
+
+  if (typeof GameManager === "undefined" ||
+      typeof KeyboardInputManager === "undefined") return;
+
+  var KEY = "2048-autofill";
+  var on = false;
+  var actuated = false;
+  var lastMoved = false;
+
+  try {
+    on = localStorage.getItem(KEY) === "on";
+  } catch (e) {
+    on = false; // site data blocked: off, and the switch lasts the session
+  }
+
+  function store(value) {
+    try {
+      if (value) {
+        localStorage.setItem(KEY, "on");
+      } else {
+        localStorage.removeItem(KEY);
+      }
+    } catch (e) {
+      /* session-only */
+    }
+  }
+
+  var actuate = GameManager.prototype.actuate;
+  GameManager.prototype.actuate = function () {
+    actuated = true;
+    actuate.call(this);
+  };
+
+  var move = GameManager.prototype.move;
+  GameManager.prototype.move = function (direction) {
+    actuated = false;
+    move.call(this, direction);
+    lastMoved = actuated;
+  };
+
+  KeyboardInputManager.prototype.downRepeat = {
+    enabled: function () { return on; },
+    moved: function () { return lastMoved; }
+  };
+
+  function init() {
+    var anchor = document.querySelector(".palette-switch") ||
+                 document.querySelector(".game-switch");
+    var container = document.querySelector(".container");
+    if (!anchor && !container) return;
+
+    // The Tiles switch's classes, so it inherits that look and its landscape
+    // rule (hidden when the screen is short).
+    var wrap = document.createElement("div");
+    wrap.className = "palette-switch autofill-switch";
+
+    var label = document.createElement("span");
+    label.className = "palette-label";
+    label.id = "autofill-label";
+    label.textContent = "Auto-fill";
+
+    var group = document.createElement("div");
+    group.className = "seg";
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-labelledby", "autofill-label");
+
+    var buttons = {};
+    [["off", "Off"], ["on", "On"]].forEach(function (pair) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.id = "autofill-" + pair[0];
+      button.textContent = pair[1];
+      button.addEventListener("click", function () {
+        var next = pair[0] === "on";
+        if (next === on) return;
+        on = next;
+        store(on);
+        render();
+        try {
+          if (navigator.vibrate) navigator.vibrate(8);
+        } catch (e) {
+          /* haptics off */
+        }
+      });
+      buttons[pair[0]] = button;
+      group.appendChild(button);
+    });
+
+    function render() {
+      buttons.on.setAttribute("aria-pressed", String(on));
+      buttons.off.setAttribute("aria-pressed", String(!on));
+    }
+
+    render();
+    wrap.appendChild(label);
+    wrap.appendChild(group);
+    if (anchor) {
+      anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+    } else {
+      container.appendChild(wrap);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
 
 /* ---- js/application.js ---- */

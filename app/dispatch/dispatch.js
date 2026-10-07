@@ -473,7 +473,6 @@
     this.addTile(shipment.tile);
     var added = Array.prototype.slice.call(this.tileContainer.children, before);
     added.forEach(function (wrapper) {
-      wrapper.classList.add("tile-shipping");
       var inner = wrapper.querySelector(".tile-inner");
       if (inner) {
         inner.setAttribute("data-edge", shipment.edge);

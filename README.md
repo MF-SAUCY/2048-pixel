@@ -35,7 +35,8 @@ build reads them on the whole document, so a flick started on the heading or in
 the margin still moves tiles.
 
 **No instructions on screen.** Upstream's "Join the numbers…" tagline and its
-how-to-play paragraph are gone; the only footer text left is the credit line.
+how-to-play paragraph are gone, and so is the credit line (the MIT notice ships
+in `app/LICENSE.txt`); the footer is just the Game, Tiles and Auto-fill switches.
 The scores and the controls row (theme toggle, New Game) stack on the right, and
 the logo takes the left at the height of both, sized with a container query to
 fill whatever width they leave: about 82px on the Pixel, against upstream's
@@ -74,6 +75,16 @@ the board alone and says "Swipe up again to move up"; a second up within three
 seconds moves. Any other move cancels the question and plays as usual, as does
 letting it lapse or starting a new game. It only asks when up would actually
 move a tile, and the up keys ask too. Dispatch doesn't load it.
+
+**Auto-fill (classic only, off by default).** A switch under Tiles, remembered
+per device. With it on, a down swipe moves as soon as it passes the swipe
+distance instead of on lift, and holding on repeats it: after about 0.35 s,
+then roughly five times a second until the finger lifts. It is a shortcut for
+swiping down over and over, not a way to summon tiles: the hold stops the
+moment a down move changes nothing, since a real swipe there would not bring a
+tile in either. Other gestures are untouched. The gesture lives in
+`input_manager.js` as an opt-in `downRepeat` hook; `autofill.js` turns it on
+and draws the switch.
 
 **A cool-to-warm tile ramp.** Upstream's five gold tiles (128→2048) vary almost
 nothing but the blue channel, so they land within 3.3 points of lightness and the

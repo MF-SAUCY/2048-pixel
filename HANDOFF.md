@@ -55,6 +55,17 @@ is new and lightly tested.
   shows "Swipe up again to move up" (the back guard's pill); a second up within
   3 s moves; any other move, a lapse or a new game cancels. It only asks when
   up would move a tile. Not in Dispatch. In the bundle and the precache list.
+- **Classic: Auto-fill switch** (`app/js/autofill.js`, plus a `downRepeat` hook
+  in `input_manager.js`). A held down swipe repeats about 5×/s and stops as
+  soon as a down move changes nothing; Joseph's rule is that it must never
+  bring in a tile a normal swipe wouldn't. New footer row under Tiles (mockup
+  option A, approved).
+- **Classic: credit line removed** at Joseph's request; the MIT notice stays in
+  `app/LICENSE.txt`. The Tiles and Auto-fill switches no longer anchor on it:
+  they sit under the Game switch, or at the foot of the page in the bundle.
+- **Dispatch: the shipping tile now draws above the others**: its z-index rule
+  keys off the inner `.is-shipping` element via `:has()`, since the actuator
+  rewrites the wrapper's classes a frame after adding it.
 
 ## Shipping a change
 
@@ -121,8 +132,11 @@ columns and the ALTERs used are in README → "The leaderboard".
   from `gameState`. The classic `GameManager` isn't on `window`.
 - **Measure `--chrome`, don't estimate it.** It's the height of everything but
   the board; set too low, short screens cut off the bottom. Values measured at
-  412 px wide: classic 274 / 382 with leaderboard; Dispatch 328 / 460. Recheck
-  after any change to the page furniture, at heights 915 → 640.
+  412 px wide: classic 281 / 388 with leaderboard (since the Auto-fill row
+  went in and the credit line came out); Dispatch 328 / 460. Recheck after any
+  change to the page furniture, at heights 915 → 640. Measure by summing the
+  container's visible children, gaps and padding, minus the board: the
+  container itself stretches to the viewport, so its own height is useless.
 - Bash commands over ~8 KB are silently cut off, and heredocs mangle `\u`,
   `\0` and quotes. Write edit scripts to the scratchpad with Write and run them.
 
@@ -165,15 +179,11 @@ columns and the ALTERs used are in README → "The leaderboard".
    use).
 5. **Stale audit artifact:** https://claude.ai/artifact/8j5b3RhgbiktpPUzZTkrow
    still compares the old ramps, not the shipped splice. Low priority.
-6. **Up guard: not yet tried on a phone.** Tested only in the browser pane.
-   Worth asking how it feels in play: whether 3 s is long enough, and whether
-   the pill at the bottom gets noticed while eyes are on the board.
-7. **Shipping tile's z-index is lost (minor, pre-existing).** `addShipment` in
-   `dispatch.js` adds `tile-shipping` to the wrapper, but `addTile`'s own rAF
-   callback then rewrites the wrapper's classes, so the `z-index: 20` rule
-   never applies. The animation itself (on `.tile-inner.is-shipping`) is fine.
-   Fix: put the z-index on the inner element, or re-add the class a frame
-   later.
+6. **Up guard and Auto-fill: not yet tried on a phone.** Both were tested in
+   the browser pane with synthetic pointer events only. Worth asking how they
+   feel in play: whether 3 s is long enough for the up question and whether
+   its pill gets noticed; whether the hold's 0.35 s start and 0.2 s repeat feel
+   right (`repeatDelayMs`, `repeatEveryMs` in `input_manager.js`).
 
 ## Known limits (not bugs)
 

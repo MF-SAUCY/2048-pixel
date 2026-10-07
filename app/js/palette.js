@@ -47,8 +47,11 @@
     var current = stored();
     apply(current);
 
-    var footer = document.querySelector(".game-credit");
-    if (!footer || !footer.parentNode) return;
+    // Under the Classic / Dispatch switch when the page has one, so the two
+    // preferences sit together; otherwise (the single-file bundle) at the foot.
+    var anchor = document.querySelector(".game-switch");
+    var container = document.querySelector(".container");
+    if (!anchor && !container) return;
 
     var wrap = document.createElement("div");
     wrap.className = "palette-switch";
@@ -95,10 +98,11 @@
     render();
     wrap.appendChild(label);
     wrap.appendChild(group);
-    // Under the Classic / Dispatch switch when the page has one, so the two
-    // preferences sit together.
-    var anchor = document.querySelector(".game-switch") || footer;
-    anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+    if (anchor) {
+      anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+    } else {
+      container.appendChild(wrap);
+    }
   }
 
   if (document.readyState === "loading") {
