@@ -3,7 +3,8 @@
  * Keeps upstream's constructor name and its on("move"|"restart"|"keepPlaying")
  * interface, so game_manager.js and application.js are used unmodified.
  *
- * Three changes from upstream:
+ * Three changes from upstream, plus an opt-in hold-to-repeat for down (see
+ * downRepeat below):
  *   1. Swipes are read on the whole document, not just the board. On a phone
  *      the board is a small target and a swipe that starts on the heading or
  *      the margin should still move tiles.
@@ -92,6 +93,7 @@ KeyboardInputManager.prototype.listen = function () {
   var tracking = false;
 
   function begin(x, y, target) {
+    self.stopRepeat();
     if (self.isControl(target)) {
       tracking = false;
       return;
@@ -101,7 +103,24 @@ KeyboardInputManager.prototype.listen = function () {
     tracking = true;
   }
 
+  // With a page's downRepeat turned on, a down swipe moves the moment it
+  // passes the threshold, without waiting for the lift, and holding on
+  // repeats it.
+  function drag(x, y) {
+    var repeat = self.downRepeat;
+    if (!tracking || !repeat || !repeat.enabled()) return;
+    var dx = x - startX;
+    var dy = y - startY;
+    if (dy > self.swipeThreshold && dy > Math.abs(dx)) {
+      tracking = false; // this gesture is spoken for; the lift adds nothing
+      self.disarmRestart();
+      self.emit("move", 2);
+      self.startRepeat();
+    }
+  }
+
   function finish(x, y) {
+    self.stopRepeat();
     if (!tracking) return;
     tracking = false;
 
@@ -123,6 +142,11 @@ KeyboardInputManager.prototype.listen = function () {
       begin(event.clientX, event.clientY, event.target);
     });
 
+    document.addEventListener("pointermove", function (event) {
+      if (!event.isPrimary) return;
+      drag(event.clientX, event.clientY);
+    });
+
     document.addEventListener("pointerup", function (event) {
       if (!event.isPrimary) return;
       finish(event.clientX, event.clientY);
@@ -130,6 +154,7 @@ KeyboardInputManager.prototype.listen = function () {
 
     document.addEventListener("pointercancel", function () {
       tracking = false;
+      self.stopRepeat();
     });
   } else {
     document.addEventListener("touchstart", function (event) {
@@ -147,6 +172,7 @@ KeyboardInputManager.prototype.listen = function () {
 
     document.addEventListener("touchcancel", function () {
       tracking = false;
+      self.stopRepeat();
     });
   }
 
@@ -154,7 +180,34 @@ KeyboardInputManager.prototype.listen = function () {
   // on these gestures; this stops the rubber-band on engines that ignore it.
   document.addEventListener("touchmove", function (event) {
     if (tracking) event.preventDefault();
+    if (!window.PointerEvent && event.touches.length === 1) {
+      drag(event.touches[0].clientX, event.touches[0].clientY);
+    }
   }, { passive: false });
+};
+
+/* Hold-to-repeat for down. Off unless a page sets downRepeat to
+ * { enabled: fn, moved: fn }, as autofill.js does on the classic page. After a
+ * short pause, a held down swipe repeats until the finger lifts or a down move
+ * changes nothing, so it only ever plays moves a fresh swipe would. */
+KeyboardInputManager.prototype.downRepeat = null;
+KeyboardInputManager.prototype.repeatDelayMs = 350;
+KeyboardInputManager.prototype.repeatEveryMs = 200;
+
+KeyboardInputManager.prototype.startRepeat = function () {
+  var self = this;
+  this.stopRepeat();
+  this.repeatTimer = setTimeout(function tick() {
+    var repeat = self.downRepeat;
+    if (!repeat || !repeat.enabled() || !repeat.moved()) return;
+    self.emit("move", 2);
+    self.repeatTimer = setTimeout(tick, self.repeatEveryMs);
+  }, this.repeatDelayMs);
+};
+
+KeyboardInputManager.prototype.stopRepeat = function () {
+  clearTimeout(this.repeatTimer);
+  this.repeatTimer = null;
 };
 
 KeyboardInputManager.prototype.restart = function (event) {

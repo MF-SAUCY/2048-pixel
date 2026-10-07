@@ -211,7 +211,9 @@
    The shipped tile slides into its bay like any other, then leaves through the
    edge. The delay lets the slide land first. */
 
-.tile.tile-shipping {
+/* Keyed off the inner element: the actuator rewrites the wrapper's classes a
+   frame after adding it, so a class put on the wrapper does not last. */
+.tile:has(> .tile-inner.is-shipping) {
   z-index: 20;
 }
 
