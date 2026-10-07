@@ -1,7 +1,7 @@
 # Handoff — where this project stands
 
-Written 2026-09-30 at the end of a long session, so the next one can pick up
-without the conversation. `README.md` explains *what* each feature does and
+Written 2026-09-30 at the end of a long session and updated 2026-10-06, so
+the next one can pick up without the conversation. `README.md` explains *what* each feature does and
 why; this file is the working state: how to ship, how to test, what's open.
 
 ## At a glance
@@ -18,16 +18,43 @@ why; this file is the working state: how to ship, how to test, what's open.
 - **claude.ai copy:** single-file bundle `dist/2048-pixel.html`, published at
   https://claude.ai/artifact/Gy5d6mnwZWd8seeuX5nkEp (classic only — no
   leaderboard, theme toggle, back guard or Dispatch; the host blocks
-  third-party fetches). Republish it when classic CSS/markup changes.
+  third-party fetches). Republish it whenever anything in the bundle changes:
+  classic markup, CSS, or any script listed in `tools/build_single_file.py`.
+  It had drifted until 2026-10-06 (the `--chrome` fix never reached it).
 
-## Live data on 2026-09-30
+## Live data on 2026-10-06
 
 | | classic best | top tile | 2048s | 4096s | Dispatch today | Dispatch best | full runs |
 |---|---|---|---|---|---|---|---|
-| Mandar | 51,620 | 4096 | 13 | 1 | 7/8, 700 | 804 | 3 |
-| J-Money | 10,476 | 1024 | 0 | 0 | 7/8, 700 | 808 | 3 |
+| Mandar | 60,500 | 4096 | 27 | 2 | 8/8, 806 | 809 | 9 |
+| J-Money | 10,476 | 1024 | 0 | 0 | 8/8, 809 | 809 | 9 |
 
-Today's Dispatch run is a **dead tie** — see "Open" below.
+Two rows, as it should be. Amanda got a new phone around 2026-10-01, which
+minted a second "Mandar" row; she linked the phone to her original row with
+`?link=` and Joseph deleted the stray one (see "A new phone" in README).
+
+## What changed 2026-09-30 → 10-06
+
+All live and described in README; listed here so the next session knows what
+is new and lightly tested.
+
+- **Dispatch: the first *full* run counts** (`26e15a8`). Until a run ships all
+  8, every attempt counts and the day shows the best attempt so far (a worse
+  retry never lowers it; ties keep the earlier one). The first full run locks
+  the day; later runs are Practice. The attempt count is deliberately neither
+  shown nor stored (Joseph's call). Storage keys keep their old
+  `dispatch-first*` names, and old-format records still read.
+- **Dispatch: a tile already waiting in the next order's bay ships at once**
+  (`26e15a8`), on the same swipe, chaining down the list. The bot does
+  slightly better for it (56 → 57 of 60 days).
+- **`?link=<player_id>` moves a device onto an existing leaderboard row**
+  (`a601d46`, in `leaderboard.js`). It drops the device's own Dispatch day and
+  queued posts first, so it can't overwrite the row's result or recreate the
+  old row. Used once, by Amanda; it worked.
+- **Classic: up asks twice** (`10238ec`, `app/js/up_guard.js`). The first up
+  shows "Swipe up again to move up" (the back guard's pill); a second up within
+  3 s moves; any other move, a lapse or a new game cancels. It only asks when
+  up would move a tile. Not in Dispatch. In the bundle and the precache list.
 
 ## Shipping a change
 
@@ -38,8 +65,14 @@ Today's Dispatch run is a **dead tie** — see "Open" below.
    `app/`. **Never bump it by hand.** A fresh clone needs
    `git config core.hooksPath .githooks` once. `python tools/stamp_sw.py --check`
    verifies.
-3. If classic markup/CSS changed: `python tools/build_single_file.py`, commit
-   `dist/`, and republish the artifact above.
+3. If classic markup, CSS or a bundled script changed:
+   `python tools/build_single_file.py`, commit `dist/`, and republish the
+   artifact above (Artifact publish with its `url`). The host refuses a publish
+   until this session has Read the live version in full: diff it against the
+   last committed `dist/` first, then Read it, then publish (it may ask for a
+   second, identical publish). A new file under `app/` also goes in the
+   precache list in `app/sw.js`, and in `SCRIPTS` in the bundler if classic
+   uses it.
 4. Deploy: `git push && git subtree push --prefix app origin gh-pages`.
 5. **Verify live** before saying it shipped: poll
    `gh api repos/MF-SAUCY/2048-pixel/pages/builds/latest` until `built` for the
@@ -78,7 +111,14 @@ columns and the ALTERs used are in README → "The leaderboard".
   scratchpad, replace `js/leaderboard-config.js` with a fake URL plus a `fetch`
   stub backed by an in-memory table, serve it on another port. On the live
   site, read-only checks: block `POST` in `fetch`, save a throwaway name, then
-  `localStorage.clear()` afterwards.
+  `localStorage.clear()` afterwards. When a test reloads the page (linking
+  does), keep the fake table in `sessionStorage` so it survives. Reading the
+  real table with the publishable key (a `curl` GET) is fine.
+- **Classic state for tests:** write a `gameState` to localStorage
+  (`{grid: {size: 4, cells}, score, over, won, keepPlaying}`, `cells[x][y]`),
+  reload, then drive it with `keydown` events (`which` 37–40) or
+  `PointerEvent` down/up pairs on `.game-container`, and read the board back
+  from `gameState`. The classic `GameManager` isn't on `window`.
 - **Measure `--chrome`, don't estimate it.** It's the height of everything but
   the board; set too low, short screens cut off the bottom. Values measured at
   412 px wide: classic 274 / 382 with leaderboard; Dispatch 328 / 460. Recheck
@@ -94,23 +134,29 @@ columns and the ALTERs used are in README → "The leaderboard".
   through two mockup rounds). Behaviour fixes can just be built and verified.
 - Report what was actually verified, on the live site, and say plainly what
   wasn't (e.g. nothing here has been tested on a physical Pixel by Claude).
+- **Commit and deploy only when Joseph says so.** He usually asks in so many
+  words ("commit and deploy"); otherwise finish with the change tested locally
+  and ask.
+- New UI that reuses an existing pattern (the up guard reused the back guard's
+  pill) was built without a mockup, and that was said up front; a genuinely
+  new element still gets one.
 - Brainstorms can go to Astra (see `~/.claude/CLAUDE.md` for the recipe);
   Dispatch came from an Astra session.
 
 ## Open — next things to do
 
 1. **Dispatch scoring ties.** Score = 100 per shipment + unused turns only on a
-   full run, so partial runs tie on shipment count alone (today: 700–700).
-   Less pressing since 2026-09-30: retries now count until a full run, so
-   most days end on full runs, which the unused turns separate. Still needs a
-   tiebreak for partial runs — e.g. turns used when the last shipment
-   landed, or value still on the board. Decide with Joseph; it changes what
-   posts, so the leaderboard shows the new score and maybe a new column.
-2. **Dispatch difficulty tuning.** Both players finish about half their runs
-   (3 full runs each over ~6 days) and bests are 804–808, i.e. finishing with
-   4–8 turns spare — consistent with the sim (bot: 57/60 days, ~94 turns).
-   Levers: `TURN_LIMIT`, `LADDER` in `app/dispatch/dispatch.js`. Re-run
-   `--sim` after changing them.
+   full run. Since retries count until a full run, days now end on full runs
+   (both 8/8 on 2026-10-06), separated by unused turns, so a tie needs equal
+   turns left. Partial runs still tie on shipment count; a tiebreak (turns used
+   when the last shipment landed, or value left on the board) is only worth it
+   if partial days come back. Decide with Joseph.
+2. **Dispatch difficulty.** Full runs went from 3 to 9 each in a week, and bests
+   sit at 806–809 (6–9 turns spare), so with retries allowed it may now be too
+   easy to finish. How many tries a full run takes isn't recorded, so the board
+   can't show it. Levers: `TURN_LIMIT`, `LADDER` in
+   `app/dispatch/dispatch.js`; re-run `--sim` after changing them (bot: 57/60
+   days, ~94 turns).
 3. **Dispatch only stores today.** No per-day history, so "who won yesterday"
    and streaks aren't possible yet. Would need a `dispatch_runs_log` table or
    more columns.
@@ -119,6 +165,15 @@ columns and the ALTERs used are in README → "The leaderboard".
    use).
 5. **Stale audit artifact:** https://claude.ai/artifact/8j5b3RhgbiktpPUzZTkrow
    still compares the old ramps, not the shipped splice. Low priority.
+6. **Up guard: not yet tried on a phone.** Tested only in the browser pane.
+   Worth asking how it feels in play: whether 3 s is long enough, and whether
+   the pill at the bottom gets noticed while eyes are on the board.
+7. **Shipping tile's z-index is lost (minor, pre-existing).** `addShipment` in
+   `dispatch.js` adds `tile-shipping` to the wrapper, but `addTile`'s own rAF
+   callback then rewrites the wrapper's classes, so the `z-index: 20` rule
+   never applies. The animation itself (on `.tile-inner.is-shipping`) is fine.
+   Fix: put the z-index on the inner element, or re-add the class a frame
+   later.
 
 ## Known limits (not bugs)
 
@@ -128,3 +183,5 @@ columns and the ALTERs used are in README → "The leaderboard".
 - The back guard can't stop Android's gesture, only absorb the first back per
   interaction; after it catches one, the next back always exits.
 - No sign-in: the leaderboard can't prove who posted, and the key is public.
+- Identity is per device: a new phone makes a new row until it is linked with
+  `?link=<player_id>`, and the stray row then has to be deleted by hand.
