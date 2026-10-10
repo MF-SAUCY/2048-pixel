@@ -2,14 +2,15 @@
    tiles, colour ramp, themes and fonts. Only what Dispatch adds lives here. */
 
 /* Heading, orders panel, rules line and game switch, plus the leaderboard when
-   there is one; measured in the browser at 412px wide. The :has() rule has to
-   restate classic's, which it would otherwise lose to on specificity. */
+   there is one, at its tallest: both rows carrying a "best" line. Measured in
+   the browser at 412px wide. The :has() rule has to restate classic's, which it
+   would otherwise lose to on specificity. */
 @media (min-height: 561px) {
   :root {
     --chrome: 328px;
   }
   :root:has(.leaderboard) {
-    --chrome: 460px;
+    --chrome: 464px;
   }
 }
 
@@ -17,6 +18,22 @@
    "2048", so the fill-the-box sizing divides by more. */
 .dispatch h1.title {
   font-size: clamp(22px, calc(100cqi / 4.6), 90px);
+}
+
+/* Dispatch counts turns, not points: the score box counts down the turns left
+   and the best box holds today's best run. */
+.dispatch .score-container::after {
+  content: "Turns left";
+}
+
+.dispatch .best-container::after {
+  content: "Best today";
+}
+
+.game-message .message-spare {
+  display: block;
+  margin-top: 6px;
+  font-size: calc(var(--board) * 0.05);
 }
 
 /* ---- orders ---- */
@@ -263,11 +280,12 @@
   white-space: nowrap;
 }
 
-.lb-foot {
-  margin: 2px 0 0;
-  font-size: 12px;
-  text-align: center;
-  color: var(--ink-muted);
+/* A practice run that beat the counted one, under that run's turns left. */
+.lb-daybest {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.7;
 }
 
 .practice-tag {

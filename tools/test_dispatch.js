@@ -358,6 +358,56 @@ test("the first full run locks the day; later runs are practice", () => {
   assert.strictEqual(p.records.data["dispatch-full-runs"], "1", "a practice win does not count");
   assert.strictEqual(p.open().attempt, "practice", "still practice after reopening");
   assert.strictEqual(p.records.data["dispatch-full-runs"], "1", "reopening does not recount");
+  assert.strictEqual(p.records.data["dispatch-day-best"], undefined, "a practice tie is not a better run");
+});
+
+function wasteTurn(g) {
+  clearBoard(g);
+  place(g, 0, 0, 2);
+  g.move(RIGHT);
+}
+
+test("a practice run that beats the counted one is kept as the day's best", () => {
+  const p = player("2026-09-24");
+  const g = p.open();
+  wasteTurn(g);
+  wasteTurn(g);
+  for (let i = 0; i < 8; i++) shipOne(g);
+  const full = record(p);
+  assert.strictEqual(D.turnsLeftOf(full.score), D.TURN_LIMIT - 10);
+  assert.strictEqual(g.bestToday(), full.score);
+
+  g.restart();
+  for (let i = 0; i < 5; i++) shipOne(g);
+  assert.strictEqual(p.records.data["dispatch-day-best"], undefined, "an unfinished practice run is not a best");
+  g.restart();
+  const before = p.results.length;
+  for (let i = 0; i < 8; i++) shipOne(g);
+  same(record(p), full, "the counted run still stands");
+  same(JSON.parse(p.records.data["dispatch-day-best"]), { seed: "2026-09-24", score: full.score + 2 });
+  assert.strictEqual(g.bestToday(), full.score + 2);
+  assert.strictEqual(p.results.length, before + 1, "announced once, so the leaderboard posts it");
+
+  g.restart();
+  wasteTurn(g);
+  for (let i = 0; i < 8; i++) shipOne(g);
+  assert.strictEqual(JSON.parse(p.records.data["dispatch-day-best"]).score, full.score + 2,
+                     "a worse practice run leaves the best alone");
+  assert.strictEqual(p.open().bestToday(), full.score + 2, "still there after reopening");
+});
+
+test("a day's best from yesterday is ignored", () => {
+  const p = player("2026-09-24");
+  p.records.set("dispatch-day-best", JSON.stringify({ seed: "2026-09-23", score: 850 }));
+  assert.strictEqual(p.open().bestToday(), 0);
+});
+
+test("runs read back as turns left, shipments, or nothing", () => {
+  assert.strictEqual(D.describeRun(0), "–");
+  assert.strictEqual(D.describeRun(500), "5/8");
+  assert.strictEqual(D.describeRun(800), "0");
+  assert.strictEqual(D.describeRun(809), "9");
+  assert.strictEqual(D.turnsLeftOf(700), null);
 });
 
 test("a record saved under the old first-attempt rule still reads", () => {

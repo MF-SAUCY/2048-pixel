@@ -259,9 +259,12 @@ value and an edge, like "32 → left" — and a tile of that value that ends a s
 in one of the edge's two middle cells ships off the board. A shipment opens the
 next order, and if a tile of that value is already sitting in one of its bays it
 ships too, on the same swipe. Eight orders, 100
-turns; 100 points a shipment, plus the unused turns if all eight ship. Merges
-score nothing, so a 64 made when the order wants a 32 is an obstacle, not
-progress.
+turns. There are no points: what counts is shipping all eight, then how many
+turns are left over, and the heading shows turns left and today's best run.
+(Runs are still ranked by one number underneath, 100 a shipment plus the unused
+turns if all eight ship, which sorts exactly that way; it is what the table
+stores.) Merges count for nothing, so a 64 made when the order wants a 32 is an
+obstacle, not progress.
 
 Every run is seeded by the date and nothing is random at play time: the orders,
 and each turn's incoming tile and where it lands, follow from the seed and the
@@ -275,13 +278,18 @@ never lowers it, and a tie keeps the earlier one. An attempt ends when the run
 does or is restarted after any move, which is why Restart asks for a second tap
 from the first move on. Restart replays the same run with every tile arriving
 where it did before, so once a full run is in, later goes are marked Practice
-and never post. The Dispatch page's leaderboard shows today's result — shipped
-count (green once all 8 ship) and score, or "not played yet" — with all-time
-best day scores and full runs under it.
+and never change the day's result. A practice run that finishes with more turns
+left than the counted one is kept as the day's **best run**: it shows in the
+heading's Best today box and under the player's row on the board, but never
+ranks. The Dispatch page's leaderboard shows today's result — shipped count
+(green once all 8 ship) and turns left, or "not played yet" — and nothing
+all-time, since every day is a different puzzle.
 
-It keeps its own saved run and best score (`dispatch-state`, `dispatch-best`) and
-the day's record (`dispatch-first`, `dispatch-first-best`, `dispatch-full-runs`;
-the names date from when only the first attempt counted). `node tools/test_dispatch.js` runs the rule tests;
+It keeps its own saved run (`dispatch-state`), the day's record
+(`dispatch-first`; the name dates from when only the first attempt counted) and
+the day's best practice run (`dispatch-day-best`). `dispatch-first-best` and
+`dispatch-full-runs` are still kept and posted (`dispatch_best`,
+`dispatch_runs`) but no longer shown. `node tools/test_dispatch.js` runs the rule tests;
 `--sim` plays 60 days with a lookahead bot. At 100 turns the bot finishes 57 of
 60 runs using about 94 turns: incoming tiles add roughly 2.2 of value a turn and
 the orders need 192, so the run is an economy of value more than a race.
@@ -314,7 +322,8 @@ create table public.scores (
   dispatch_shipped integer not null default 0,
   dispatch_done    boolean not null default false,
   dispatch_best    integer not null default 0,
-  dispatch_runs    integer not null default 0
+  dispatch_runs    integer not null default 0,
+  dispatch_day_best integer not null default 0
 );
 
 alter table public.scores enable row level security;
@@ -358,6 +367,13 @@ alter table public.scores
   add column if not exists dispatch_done    boolean not null default false,
   add column if not exists dispatch_best    integer not null default 0,
   add column if not exists dispatch_runs    integer not null default 0;
+```
+
+and the day's best run (added 2026-10-10):
+
+```sql
+alter table public.scores
+  add column if not exists dispatch_day_best integer not null default 0;
 ```
 
 ### What it records

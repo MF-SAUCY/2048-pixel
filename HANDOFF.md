@@ -63,6 +63,13 @@ is new and lightly tested.
 - **Classic: credit line removed** at Joseph's request; the MIT notice stays in
   `app/LICENSE.txt`. The Tiles and Auto-fill switches no longer anchor on it:
   they sit under the Game switch, or at the foot of the page in the bundle.
+- **Dispatch: turns left instead of points; day's best run** (2026-10-10).
+  Heading boxes are "Turns left" and "Best today"; the board shows "9 left"
+  and, under it, "best 12" when a practice run beat the counted one (stored as
+  `dispatch-day-best` locally and `dispatch_day_best` in the table). All-time
+  best and full-runs footer removed (still posted, not shown). `--chrome` with
+  leaderboard is now 464 (both rows carrying a best line). Needs the
+  `dispatch_day_best` column added in Supabase before deploying.
 - **Dispatch: the shipping tile now draws above the others**: its z-index rule
   keys off the inner `.is-shipping` element via `:has()`, since the actuator
   rewrites the wrapper's classes a frame after adding it.
@@ -133,7 +140,7 @@ columns and the ALTERs used are in README → "The leaderboard".
 - **Measure `--chrome`, don't estimate it.** It's the height of everything but
   the board; set too low, short screens cut off the bottom. Values measured at
   412 px wide: classic 281 / 388 with leaderboard (since the Auto-fill row
-  went in and the credit line came out); Dispatch 328 / 460. Recheck after any
+  went in and the credit line came out); Dispatch 328 / 464. Recheck after any
   change to the page furniture, at heights 915 → 640. Measure by summing the
   container's visible children, gaps and padding, minus the board: the
   container itself stretches to the viewport, so its own height is useless.
@@ -159,12 +166,10 @@ columns and the ALTERs used are in README → "The leaderboard".
 
 ## Open — next things to do
 
-1. **Dispatch scoring ties.** Score = 100 per shipment + unused turns only on a
-   full run. Since retries count until a full run, days now end on full runs
-   (both 8/8 on 2026-10-06), separated by unused turns, so a tie needs equal
-   turns left. Partial runs still tie on shipment count; a tiebreak (turns used
-   when the last shipment landed, or value left on the board) is only worth it
-   if partial days come back. Decide with Joseph.
+1. **Dispatch scoring ties.** Players now see turns left, not points (the
+   ranked number underneath is unchanged: 100 per shipment + unused turns on a
+   full run). Full runs tie only on equal turns left; partial runs still tie on
+   shipment count. A tiebreak is only worth it if partial days come back.
 2. **Dispatch difficulty.** Full runs went from 3 to 9 each in a week, and bests
    sit at 806–809 (6–9 turns spare), so with retries allowed it may now be too
    easy to finish. How many tries a full run takes isn't recorded, so the board
