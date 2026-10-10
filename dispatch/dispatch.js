@@ -13,8 +13,11 @@
  *     tiles.
  *   - A run is 8 orders within 100 turns. A turn is any swipe that moves a tile
  *     or ships one; each turn brings one new tile.
- *   - Score: 100 per shipment, plus the unused turns if all 8 ship. Merges score
- *     nothing, so a 64 made too early is not progress, it is a 64 in the way.
+ *   - What counts is shipping all 8, then how many turns are left over. Runs
+ *     are ranked by a single number, 100 per shipment plus the unused turns if
+ *     all 8 ship, but players only ever see shipments and turns left. Merges
+ *     count for nothing, so a 64 made too early is not progress, it is a 64 in
+ *     the way.
  *   - The run ends when all 8 ship, when the turns run out, or when no swipe can
  *     move a tile or ship one.
  *
@@ -34,8 +37,10 @@
  * one. An attempt ends when the run does, or when it is restarted after any
  * move. Restart replays the same run with every tile arriving where it did
  * before, so once a full run is in, later goes are marked Practice and never
- * post. The day's result is kept in `records` (localStorage in the app) and
- * announced through onResult, which the leaderboard listens to.
+ * change the day's result. A practice run that beats it is kept apart as the
+ * day's best run, shown beside the result but never ranked. Both are kept in
+ * `records` (localStorage in the app) and announced through onResult, which
+ * the leaderboard listens to.
  *
  * The movement code is upstream's GameManager, borrowed method by method, so a
  * swipe behaves exactly as it does in the classic game.
@@ -52,6 +57,23 @@
   // 32, 32, 64 before shuffling.
   var LADDER = [3, 3, 4, 4, 4, 5, 5, 6];
   var EDGES = ["top", "right", "bottom", "left"];
+
+  /* ---- reading a ranked score back ---- */
+
+  // Turns left on a full run, or null for a run that did not ship all 8.
+  function turnsLeftOf(score) {
+    var full = ORDER_COUNT * SHIP_POINTS;
+    return score >= full ? score - full : null;
+  }
+
+  // A ranked score as players see it: turns left on a full run, shipments
+  // otherwise, a dash for no run at all.
+  function describeRun(score) {
+    if (!score) return "–";
+    var left = turnsLeftOf(score);
+    return left !== null ? String(left)
+                         : Math.floor(score / SHIP_POINTS) + "/" + ORDER_COUNT;
+  }
 
   /* ---- seeded randomness ---- */
 
@@ -381,24 +403,47 @@
     if (this.onResult) this.onResult(record, this.totals());
   };
 
+  // The best practice run today, if one has finished all 8.
+  DispatchManager.prototype.practiceBest = function () {
+    if (!this.records) return 0;
+    try {
+      var best = JSON.parse(this.records.get("dispatch-day-best") || "null");
+      return best && best.seed === this.seed ? best.score || 0 : 0;
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  // Only a full practice run can beat the full run that made it practice, so
+  // only a won one is looked at.
+  DispatchManager.prototype.recordPractice = function () {
+    if (!this.records || !this.won || this.score <= this.bestToday()) return;
+    this.records.set("dispatch-day-best", JSON.stringify({ seed: this.seed, score: this.score }));
+    if (this.onResult) this.onResult(this.dayRecord(), this.totals());
+  };
+
+  // Today's best run of any kind, counted or practice, as ranked.
+  DispatchManager.prototype.bestToday = function () {
+    var record = this.dayRecord();
+    return Math.max(record ? record.score : 0, this.practiceBest());
+  };
+
   DispatchManager.prototype.actuate = function () {
     if (this.attempt === "counting" && this.turn > 0) this.recordRun(false);
+    if (this.attempt === "practice") this.recordPractice();
 
-    var best = 0;
     if (this.storage) {
-      if (this.storage.getBestScore() < this.score) {
-        this.storage.setBestScore(this.score);
-      }
-      best = this.storage.getBestScore();
       // Unlike classic, a finished run is kept, so reopening the app on the
       // same day shows the result rather than quietly starting over.
       this.storage.setGameState(this.serialize());
     }
 
     if (!this.actuator) return;
+    var best = this.bestToday();
     this.actuator.actuate(this.grid, {
-      score: this.score,
-      bestScore: best,
+      // The score box shows turns left, and the best box today's best run.
+      score: TURN_LIMIT - this.turn,
+      bestScore: describeRun(best),
       over: this.over,
       won: this.won,
       terminated: this.isGameTerminated(),
@@ -441,9 +486,21 @@
            value + "</span>";
   }
 
+  // Plain numbers: turns only go down within a run, and a restart sending them
+  // back up to 100 is not a gain worth a "+" pop.
+  DispatchActuator.prototype.updateScore = function (turnsLeft) {
+    this.clearContainer(this.scoreContainer);
+    this.scoreContainer.textContent = turnsLeft;
+  };
+
+  DispatchActuator.prototype.updateBestScore = function (text) {
+    this.bestContainer.textContent = text;
+  };
+
   DispatchActuator.prototype.actuate = function (grid, meta) {
     var self = this;
     this.reason = meta.reason;
+    this.turnsLeft = meta.turnsLeft;
     // Goes through HTMLActuator.prototype.actuate at call time, so the merge
     // particles and haptics that effects.js hangs on it come along.
     HTMLActuator.prototype.actuate.call(this, grid, meta);
@@ -524,9 +581,8 @@
   DispatchActuator.prototype.renderStatus = function (meta) {
     this.statusEl.innerHTML =
       "<span><b>" + meta.shipped + "</b>/" + meta.orders.length + " shipped</span>" +
-      "<span><b>" + meta.turnsLeft + "</b> turns left</span>" +
       (meta.attempt === "practice"
-        ? '<span class="practice-tag" title="Today’s full run already counted">Practice</span>'
+        ? '<span class="practice-tag" title="Today’s full run already counted; a better one shows as your best today">Practice</span>'
         : "");
 
     this.nextEl.innerHTML = meta.upcoming.length
@@ -542,7 +598,15 @@
              : this.reason === "turns" ? "Out of turns"
              : "Jammed";
     this.messageContainer.classList.add(type);
-    this.messageContainer.getElementsByTagName("p")[0].textContent = text;
+    var p = this.messageContainer.getElementsByTagName("p")[0];
+    p.textContent = text;
+    if (won) {
+      var spare = document.createElement("span");
+      spare.className = "message-spare";
+      spare.textContent = this.turnsLeft === 1 ? "1 turn to spare"
+                                               : this.turnsLeft + " turns to spare";
+      p.appendChild(spare);
+    }
   };
 
   /* ---- exports and start-up ---- */
@@ -607,6 +671,8 @@
     supplyFor: supplyFor,
     bayCells: bayCells,
     todaySeed: todaySeed,
+    turnsLeftOf: turnsLeftOf,
+    describeRun: describeRun,
     ORDER_COUNT: ORDER_COUNT,
     TURN_LIMIT: TURN_LIMIT
   };

@@ -22,8 +22,9 @@
  *   Two boards, one row per player. On the classic page it shows best scores and
  *   2048 / 4096 counts; on the Dispatch page it shows today's run (the first
  *   full run of the day, or the best attempt until there is one, which
- *   dispatch.js records), with all-time bests and full runs under it. Each page writes only its own columns, and the upsert
- *   leaves the other page's columns as they were.
+ *   dispatch.js records) as shipments and turns left, with the day's best run
+ *   under it when a later practice run beat it. Each page writes only its own
+ *   columns, and the upsert leaves the other page's columns as they were.
  */
 
 (function () {
@@ -50,8 +51,7 @@
   var panel = null;
   var listEl = null;
   var mine = { best: 0, games: 0, bestTile: 0, wins2048: 0, wins4096: 0 };
-  var run = { day: null, score: 0, shipped: 0, done: false, best: 0, runs: 0 };
-  var footEl = null;
+  var run = { day: null, score: 0, shipped: 0, done: false, dayBest: 0, best: 0, runs: 0 };
   var writeTimer = null;
   var refreshTimer = null;
 
@@ -108,7 +108,7 @@
     return fetch(endpoint("scores?select=player_id,name,best,games,best_tile," +
                           "wins_2048,wins_4096,dispatch_day,dispatch_score," +
                           "dispatch_shipped,dispatch_done,dispatch_best," +
-                          "dispatch_runs&order=best.desc&limit=20"), {
+                          "dispatch_runs,dispatch_day_best&order=best.desc&limit=20"), {
       headers: headers({ Accept: "application/json" }),
       cache: "no-store"
     }).then(function (r) {
@@ -142,6 +142,7 @@
         dispatch_score: run.score,
         dispatch_shipped: run.shipped,
         dispatch_done: run.done,
+        dispatch_day_best: run.dayBest,
         dispatch_best: run.best,
         dispatch_runs: run.runs
       };
@@ -285,6 +286,15 @@
       run.shipped = record.shipped || 0;
       run.done = !!record.done;
     }
+    // The day's best run is the counted one unless a practice run beat it.
+    var practice = null;
+    try {
+      practice = JSON.parse(read("dispatch-day-best") || "null");
+    } catch (e) {
+      practice = null;
+    }
+    run.dayBest = Math.max(run.score,
+                           practice && practice.seed === run.day ? practice.score || 0 : 0);
     run.best = Math.max(run.best, parseInt(read("dispatch-first-best") || "0", 10) || 0);
     run.runs = Math.max(run.runs, parseInt(read("dispatch-full-runs") || "0", 10) || 0);
   }
@@ -301,6 +311,10 @@
       score: row.dispatch_score || 0,
       shipped: row.dispatch_shipped || 0,
       done: true
+    }));
+    write("dispatch-day-best", JSON.stringify({
+      seed: row.dispatch_day,
+      score: row.dispatch_day_best || 0
     }));
     write("dispatch-state", null);
     location.reload();
@@ -321,6 +335,25 @@
            (r.dispatch_done ? "" : " \u2026") + "</span>";
   }
 
+  // The counted run as turns left once all 8 ship, a dash before then (the
+  // x/8 beside it says how far it got), and under it the day's best run when
+  // a practice run beat the counted one.
+  function runResult(r) {
+    if (!playedToday(r)) return "—";
+    var left = turnsLeftOf(r.dispatch_score || 0);
+    var html = left === null ? "—" : left + " left";
+    var best = r.dispatch_day_best || 0;
+    if (best > (r.dispatch_score || 0) && turnsLeftOf(best) !== null) {
+      html += '<span class="lb-daybest">best ' + turnsLeftOf(best) + "</span>";
+    }
+    return html;
+  }
+
+  function turnsLeftOf(score) {
+    if (window.Dispatch) return window.Dispatch.turnsLeftOf(score);
+    return score >= 800 ? score - 800 : null;
+  }
+
   function renderDispatch(rows) {
     rows.sort(function (a, b) {
       var sa = playedToday(a) ? (a.dispatch_score || 0) : -1;
@@ -334,21 +367,8 @@
              '<span class="lb-rank">' + (i + 1) + "</span>" +
              '<span class="lb-name">' + esc(r.name || "Player") + "</span>" +
              runChip(r) +
-             '<span class="lb-score">' +
-               (playedToday(r) ? (r.dispatch_score || 0).toLocaleString() : "\u2014") +
-             "</span></li>";
+             '<span class="lb-score">' + runResult(r) + "</span></li>";
     }).join("");
-
-    if (footEl) {
-      var byBest = rows.slice().sort(function (a, b) {
-        return (b.dispatch_best || 0) - (a.dispatch_best || 0);
-      });
-      footEl.textContent = "Best ever: " + byBest.map(function (r) {
-        return (r.name || "Player") + " " + (r.dispatch_best || 0).toLocaleString();
-      }).join(" \u00b7 ") + " \u00b7 Full runs: " + byBest.map(function (r) {
-        return r.dispatch_runs || 0;
-      }).join(" \u2013 ");
-    }
   }
 
   function render(rows) {
@@ -457,8 +477,7 @@
         : "";
       panel.innerHTML =
         '<h2 class="lb-title"><span>Today\u2019s run</span><span>' + esc(label) +
-        '</span></h2><ol class="lb-list"></ol><p class="lb-foot"></p>';
-      footEl = panel.querySelector(".lb-foot");
+        '</span></h2><ol class="lb-list"></ol>';
     } else {
       panel.innerHTML =
         '<h2 class="lb-title">Leaderboard</h2><ol class="lb-list"></ol>';
@@ -552,6 +571,7 @@
     write(PENDING_KEYS.classic, null);
     write(PENDING_KEYS.dispatch, null);
     write("dispatch-first", null);
+    write("dispatch-day-best", null);
     write("dispatch-state", null);
     write(LINKED_KEY, "1");
     location.replace(location.pathname + location.hash);
