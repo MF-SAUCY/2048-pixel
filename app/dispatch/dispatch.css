@@ -1,16 +1,16 @@
 /* Dispatch — layered on the classic stylesheet, which supplies the board,
    tiles, colour ramp, themes and fonts. Only what Dispatch adds lives here. */
 
-/* Heading, orders panel, rules line and game switch, plus the leaderboard when
+/* Heading, orders panel and game switch, plus the leaderboard when
    there is one, at its tallest: both rows carrying a "best" line. Measured in
    the browser at 412px wide. The :has() rule has to restate classic's, which it
    would otherwise lose to on specificity. */
 @media (min-height: 561px) {
   :root {
-    --chrome: 328px;
+    --chrome: 296px;
   }
   :root:has(.leaderboard) {
-    --chrome: 464px;
+    --chrome: 434px;
   }
 }
 
@@ -28,6 +28,23 @@
 
 .dispatch .best-container::after {
   content: "Best today";
+}
+
+/* The long captions make each box about 93px wide. On a short screen the board,
+   and so the page, gets narrow enough that the title could no longer fit
+   beside them, so below 300px the captions shorten. */
+.dispatch .heading {
+  container-type: inline-size;
+}
+
+@container (max-width: 300px) {
+  .dispatch .score-container::after {
+    content: "Turns";
+  }
+
+  .dispatch .best-container::after {
+    content: "Best";
+  }
 }
 
 .game-message .message-spare {
@@ -297,16 +314,6 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-/* ---- footer ---- */
-
-.dispatch-rules {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.45;
-  text-align: center;
-  color: var(--ink-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {

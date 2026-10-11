@@ -140,7 +140,7 @@ columns and the ALTERs used are in README → "The leaderboard".
 - **Measure `--chrome`, don't estimate it.** It's the height of everything but
   the board; set too low, short screens cut off the bottom. Values measured at
   412 px wide: classic 281 / 388 with leaderboard (since the Auto-fill row
-  went in and the credit line came out); Dispatch 328 / 464. Recheck after any
+  went in and the credit line came out); Dispatch 296 / 434 (since the rules line came out). Recheck after any
   change to the page furniture, at heights 915 → 640. Measure by summing the
   container's visible children, gaps and padding, minus the board: the
   container itself stretches to the viewport, so its own height is useless.
@@ -200,3 +200,8 @@ columns and the ALTERs used are in README → "The leaderboard".
 - No sign-in: the leaderboard can't prove who posted, and the key is public.
 - Identity is per device: a new phone makes a new row until it is linked with
   `?link=<player_id>`, and the stray row then has to be deleted by hand.
+- Dispatch with the leaderboard: below about 700 px of viewport height the
+  board, and so the page, gets narrow enough that the "Dispatch" title runs
+  under the score boxes (it did before 2026-10-10 too). Below a 300 px heading
+  the captions shorten to "Turns" / "Best", which keeps it from starting
+  sooner. A 412 x 915 phone screen is well clear of it.
