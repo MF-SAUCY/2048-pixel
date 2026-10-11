@@ -2309,6 +2309,7 @@ GameManager.prototype.positionsEqual = function (first, second) {
     this.canvas = document.createElement("canvas");
     this.canvas.className = "fx-layer";
     this.canvas.setAttribute("aria-hidden", "true");
+    this.canvas.style.display = "none"; // shown only while sparks fly
     boardEl.appendChild(this.canvas);
 
     // display-p3 backing store where available; Chrome on this panel has it.
@@ -2407,6 +2408,7 @@ GameManager.prototype.positionsEqual = function (first, second) {
     if (this.running) return;
     this.running = true;
     this.lastTime = 0;
+    this.canvas.style.display = "";
 
     var self = this;
     window.requestAnimationFrame(function step(now) {
@@ -2414,18 +2416,33 @@ GameManager.prototype.positionsEqual = function (first, second) {
       var dt = self.lastTime ? Math.min((now - self.lastTime) / 1000, 0.05) : 0.016;
       self.lastTime = now;
 
-      self.update(dt);
-      self.draw();
+      try {
+        self.update(dt);
+        self.draw();
+      } catch (e) {
+        self.particles = [];
+        self.rings = [];
+      }
 
       if (self.particles.length || self.rings.length) {
         window.requestAnimationFrame(step);
       } else {
-        // Nothing left to draw: clear once and release the frame callback so the
-        // panel can drop back to its idle refresh rate.
-        self.ctx.clearRect(0, 0, self.size, self.size);
-        self.running = false;
+        self.park();
       }
     });
+  };
+
+  // Nothing left to draw: release the frame callback so the panel can drop
+  // back to its idle refresh rate, and take the layer out of the page. On the
+  // Pixel the last frame of sparks was seen to stay on screen as a smeared
+  // band, long after it had been cleared, while play went on beneath it. So
+  // rather than trust a final clear to reach the screen, the backing store is
+  // rebuilt (resize sets its size, which empties it) and the canvas hidden
+  // until the next merge.
+  Effects.prototype.park = function () {
+    this.running = false;
+    this.resize();
+    this.canvas.style.display = "none";
   };
 
   Effects.prototype.update = function (dt) {
@@ -2454,7 +2471,12 @@ GameManager.prototype.positionsEqual = function (first, second) {
 
   Effects.prototype.draw = function () {
     var ctx = this.ctx;
-    ctx.clearRect(0, 0, this.size, this.size);
+    // The whole backing store, not the board's CSS square: the two can differ
+    // by a rounded pixel, and nothing should survive a frame.
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.restore();
 
     var i;
 
