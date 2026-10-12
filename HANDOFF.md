@@ -1,6 +1,6 @@
 # Handoff — where this project stands
 
-Written 2026-09-30 at the end of a long session and updated 2026-10-06, so
+Written 2026-09-30 at the end of a long session and updated 2026-10-12, so
 the next one can pick up without the conversation. `README.md` explains *what* each feature does and
 why; this file is the working state: how to ship, how to test, what's open.
 
@@ -33,7 +33,7 @@ Two rows, as it should be. Amanda got a new phone around 2026-10-01, which
 minted a second "Mandar" row; she linked the phone to her original row with
 `?link=` and Joseph deleted the stray one (see "A new phone" in README).
 
-## What changed 2026-09-30 → 10-06
+## What changed 2026-09-30 → 10-12
 
 All live and described in README; listed here so the next session knows what
 is new and lightly tested.
@@ -67,9 +67,24 @@ is new and lightly tested.
   Heading boxes are "Turns left" and "Best today"; the board shows "9 left"
   and, under it, "best 12" when a practice run beat the counted one (stored as
   `dispatch-day-best` locally and `dispatch_day_best` in the table). All-time
-  best and full-runs footer removed (still posted, not shown). `--chrome` with
-  leaderboard is now 464 (both rows carrying a best line). Needs the
-  `dispatch_day_best` column added in Supabase before deploying.
+  best and full-runs footer removed (still posted, not shown). The
+  `dispatch_day_best` column was added in Supabase the same day.
+- **Dispatch: rules line under the board removed** (2026-10-10). The board
+  gets the room; captions shorten to "Turns" / "Best" when the heading is
+  under 300 px wide (a container query on `.heading`).
+- **Spark layer hidden when idle** (2026-10-10, `effects.js`, also in the
+  bundle). Joseph's screen recording showed a merge's sparks stuck on the
+  board as a smeared band of streaks while play went on underneath. Astra
+  and Claude both read it as Chrome on the phone showing a stale frame of
+  the canvas. The canvas is now `display: none` except while sparks fly; when
+  the last one dies the backing store is rebuilt and the canvas hidden. Each
+  frame clears the whole backing store. **Not yet confirmed on the phone.**
+  If it recurs, the next step is an sRGB canvas instead of display-p3, which
+  makes the sparks slightly duller than the P3 tiles (a colour change: show
+  Joseph first).
+- **`tools/bot_classic.js`** (2026-10-12): an expectimax player that runs full
+  classic games on the real GameManager. 17 of 18 games reached 8192 and 7
+  reached 16384, which answered whether an 8192 can be made in normal play.
 - **Dispatch: the shipping tile now draws above the others**: its z-index rule
   keys off the inner `.is-shipping` element via `:has()`, since the actuator
   rewrites the wrapper's classes a frame after adding it.
@@ -146,6 +161,13 @@ columns and the ALTERs used are in README → "The leaderboard".
   container itself stretches to the viewport, so its own height is useless.
 - Bash commands over ~8 KB are silently cut off, and heredocs mangle `\u`,
   `\0` and quotes. Write edit scripts to the scratchpad with Write and run them.
+- **Videos from Joseph's phone:** there is no ffmpeg or OpenCV here. Play the
+  file in the browser pane and draw frames to a canvas, but load it with
+  `fetch` into a blob URL first: `python -m http.server` ignores range
+  requests, so every seek silently lands on frame 0 and the video looks
+  frozen (this misled a whole diagnosis once).
+- **The pane caches scripts hard,** even after `fetch(..., {cache: "reload"})`.
+  A tiny server that sends `Cache-Control: no-store` is the reliable fix.
 
 ## Working agreements with Joseph
 
@@ -189,6 +211,10 @@ columns and the ALTERs used are in README → "The leaderboard".
    feel in play: whether 3 s is long enough for the up question and whether
    its pill gets noticed; whether the hold's 0.35 s start and 0.2 s repeat feel
    right (`repeatDelayMs`, `repeatEveryMs` in `input_manager.js`).
+7. **Check the spark fix on the phone.** Ask whether the stuck streaks have
+   come back since 2026-10-10 (see "Spark layer hidden when idle").
+8. **Dispatch "best N" line not yet seen in real use.** It appears only when a
+   practice run beats the counted one.
 
 ## Known limits (not bugs)
 
