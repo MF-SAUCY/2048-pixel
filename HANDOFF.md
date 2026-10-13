@@ -85,23 +85,25 @@ is new and lightly tested.
 - **`tools/bot_classic.js`** (2026-10-12): an expectimax player that runs full
   classic games on the real GameManager. 17 of 18 games reached 8192 and 7
   reached 16384, which answered whether an 8192 can be made in normal play.
-- **Fib, Threes and Turtle modes** (2026-10-12, built, tested in the pane,
-  **not yet committed or deployed**). Three new pages on a five-way Game
+- **Fib, Threes and Turtle modes** (2026-10-12, `1d23169`, live; tested in
+  the pane only, not yet on a phone). Three new pages on a five-way Game
   switch; see README → "Fib, Threes and Turtle". Turtle draws one of four
   turtle boards at random per new game (Sage, Reef Glider, Garden Keeper,
   Pocket Pal; Joseph approved all four and their colours). Rule tests:
-  `node tools/test_variants.js` (23). **Before the deploy**, Joseph runs
-  `tools/variant_columns.sql` in Supabase; each page now selects only its own
-  columns, so until then only the three new boards fail, not classic or
-  Dispatch. `effects.js` gained two page hooks (`fxCellCenter`,
-  `fxTileToken`), so the bundle was rebuilt and the claude.ai artifact needs a
-  republish with the deploy. `--chrome` for the new pages measured at 412 px:
+  `node tools/test_variants.js` (23). The six columns in
+  `tools/variant_columns.sql` were added in Supabase the same day; each page
+  selects only its own columns, so a missing column only breaks that page's
+  board. `effects.js` gained two page hooks (`fxCellCenter`,
+  `fxTileToken`), so the bundle was rebuilt and the claude.ai artifact
+  republished (version 13). `--chrome` for the new pages measured at 412 px:
   201 / 310 with the leaderboard (name-entry state). Classic measured 391 with
   two badge rows against its 388 setting; not changed, worth a recheck.
 - **How to play cards** for Fib, Threes and Turtle (2026-10-12): a "?" beside
   the theme toggle (Joseph picked option A from a mockup) opens a rules card
   over the board. Tested in the pane: input is blocked while it is open, and
-  it closes with Got it, Escape or a tap outside. Not in the bundle.
+  it closes with Got it, Escape or a tap outside. Not in the bundle. Live as
+  `eb64068`; that deploy's Pages build hung in `building` and a queued
+  rebuild fixed it.
 - **Dispatch: the shipping tile now draws above the others**: its z-index rule
   keys off the inner `.is-shipping` element via `:has()`, since the actuator
   rewrites the wrapper's classes a frame after adding it.
