@@ -43,12 +43,15 @@ GameManager.prototype.setup = function () {
     this.over        = previousState.over;
     this.won         = previousState.won;
     this.keepPlaying = previousState.keepPlaying;
+    // Games saved before the move counter existed start counting from here.
+    this.moves       = previousState.moves || 0;
   } else {
     this.grid        = new Grid(this.size);
     this.score       = 0;
     this.over        = false;
     this.won         = false;
     this.keepPlaying = false;
+    this.moves       = 0;
 
     // Add the initial tiles
     this.addStartTiles();
@@ -93,6 +96,7 @@ GameManager.prototype.actuate = function () {
     over:       this.over,
     won:        this.won,
     bestScore:  this.storageManager.getBestScore(),
+    moves:      this.moves,
     terminated: this.isGameTerminated()
   });
 
@@ -105,7 +109,8 @@ GameManager.prototype.serialize = function () {
     score:       this.score,
     over:        this.over,
     won:         this.won,
-    keepPlaying: this.keepPlaying
+    keepPlaying: this.keepPlaying,
+    moves:       this.moves
   };
 };
 
@@ -180,6 +185,7 @@ GameManager.prototype.move = function (direction) {
   });
 
   if (moved) {
+    this.moves += 1;
     this.addRandomTile();
 
     if (!this.movesAvailable()) {

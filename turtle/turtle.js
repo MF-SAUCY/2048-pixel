@@ -127,6 +127,7 @@
       this.over = previousState.over;
       this.won = previousState.won;
       this.keepPlaying = previousState.keepPlaying;
+      this.moves = previousState.moves || 0;
       this.skin = previousState.skin || this.pickSkin(lastSkin);
     } else {
       this.grid = new HexGrid(SIZE);
@@ -134,6 +135,7 @@
       this.over = false;
       this.won = false;
       this.keepPlaying = false;
+      this.moves = 0;
       this.skin = this.pickSkin(lastSkin);
       this.addStartTiles();
     }
@@ -149,6 +151,7 @@
       over: this.over,
       won: this.won,
       keepPlaying: this.keepPlaying,
+      moves: this.moves,
       skin: this.skin
     };
   };
@@ -211,6 +214,7 @@
     });
 
     if (moved) {
+      this.moves += 1;
       this.addRandomTile();
       if (!this.movesAvailable()) this.over = true;
       this.actuate();

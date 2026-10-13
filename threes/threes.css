@@ -67,7 +67,7 @@
 
 @container (max-width: 360px) {
   .threes .score-container,
-  .threes .best-container {
+  .threes .moves-container {
     min-width: 54px;
     padding: 8px 8px;
   }

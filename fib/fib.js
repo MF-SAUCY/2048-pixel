@@ -107,6 +107,7 @@
     });
 
     if (moved) {
+      this.moves += 1;
       this.addRandomTile();
       if (!this.movesAvailable()) this.over = true;
       this.actuate();

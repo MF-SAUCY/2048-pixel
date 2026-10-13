@@ -3,14 +3,15 @@
 
 /* Heading, orders panel and game switch, plus the leaderboard when
    there is one, at its tallest: both rows carrying a "best" line. Measured in
-   the browser at 412px wide. The :has() rule has to restate classic's, which it
-   would otherwise lose to on specificity. */
+   the browser at 412px wide; the one-line heading (2026-10-12) took 69px off
+   both. The :has() rule has to restate classic's, which it would otherwise
+   lose to on specificity. */
 @media (min-height: 561px) {
   :root {
-    --chrome: 296px;
+    --chrome: 229px;
   }
   :root:has(.leaderboard) {
-    --chrome: 434px;
+    --chrome: 367px;
   }
 }
 
@@ -20,51 +21,131 @@
   font-size: clamp(22px, calc(100cqi / 4.6), 90px);
 }
 
-/* Dispatch counts turns, not points: the score box counts down the turns left
-   and the best box holds today's best run. */
-.dispatch .score-container::after {
-  content: "Turns left";
-}
-
-.dispatch .best-container::after {
-  content: "Best today";
-}
-
-/* The long captions make each box about 93px wide. On a short screen the board,
-   and so the page, gets narrow enough that the title could no longer fit
-   beside them, so below 300px the captions shorten. */
-.dispatch .heading {
-  container-type: inline-size;
-}
-
-@container (max-width: 300px) {
-  .dispatch .score-container::after {
-    content: "Turns";
-  }
-
-  .dispatch .best-container::after {
-    content: "Best";
-  }
-}
-
 .game-message .message-spare {
   display: block;
   margin-top: 6px;
   font-size: calc(var(--board) * 0.05);
 }
 
-/* ---- orders ---- */
+/* ---- orders ----
+   Two rows above the board: the active order with the moves left beside it,
+   and the shipped count; then the next three incoming tiles and the two
+   orders after this one. Moves left and shipped use the score boxes' look. */
 
 .dispatch-panel {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  container-type: inline-size;
+}
+
+.dispatch-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.dispatch-active,
+.dispatch-shipped {
+  border-radius: 8px;
+  background: var(--board-bg);
+  color: var(--ink-light);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition-property: background-color, color;
+  transition-duration: 240ms;
+  transition-timing-function: ease;
+}
+
+.dispatch-active {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+  padding: 6px 14px 6px 6px;
+}
+
+/* The last few moves: the pill takes the title colour, in both themes. */
+.dispatch-active.is-low {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.dispatch-active-chip {
+  display: flex;
+}
+
+.dispatch-active-chip:empty {
+  display: none;
+}
+
+.dispatch-moves,
+.dispatch-shipped {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.dispatch-shipped {
+  align-items: center;
+  min-width: 62px;
+  padding: 6px 14px;
+}
+
+/* Captions above the numbers, as on the score boxes. */
+.dispatch-moves::after,
+.dispatch-shipped::after {
+  color: var(--score-label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.dispatch-moves::after {
+  content: "Moves left";
+}
+
+.dispatch-shipped::after {
+  content: "Shipped";
+}
+
+.dispatch-active.is-low .dispatch-moves::after {
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* A page squeezed by a short screen: shorter caption, tighter pill. */
+@container (max-width: 300px) {
+  .dispatch-moves::after {
+    content: "Moves";
+  }
+
+  .dispatch-active {
+    gap: 8px;
+    padding-right: 10px;
+  }
+
+  .dispatch-shipped {
+    min-width: 0;
+    padding: 6px 10px;
+  }
+}
+
+.dispatch-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
 }
 
 .dispatch-orders {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -73,24 +154,7 @@
 .order {
   display: flex;
   align-items: center;
-  gap: 6px;
-  opacity: 0.55;
-}
-
-.order.is-active {
-  flex: 0 0 auto;
-  gap: 8px;
-  margin-right: auto;
-  padding: 6px 12px 6px 6px;
-  border-radius: 8px;
-  background: var(--board-bg);
-  color: var(--ink-light);
-  opacity: 1;
-}
-
-.order.is-done {
-  font-weight: 700;
-  opacity: 1;
+  gap: 2px;
 }
 
 .order-chip,
@@ -106,15 +170,16 @@
 }
 
 .order-chip {
-  min-width: 34px;
-  height: 30px;
-  padding: 0 6px;
-  font-size: 15px;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 4px;
+  font-size: 13px;
 }
 
-.order.is-active .order-chip {
+.dispatch-active .order-chip {
   min-width: 50px;
   height: 42px;
+  padding: 0 6px;
   font-size: 22px;
 }
 
@@ -126,12 +191,7 @@
 
 .order-edge {
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--ink);
 }
 
 .order-edge svg {
@@ -139,47 +199,15 @@
   height: 18px;
 }
 
-.order.is-active .order-edge {
-  font-size: 13px;
-}
-
-.order.is-active .order-edge svg {
-  width: 24px;
-  height: 24px;
-}
-
 .order-edge[data-edge="right"] svg  { transform: rotate(90deg); }
 .order-edge[data-edge="bottom"] svg { transform: rotate(180deg); }
 .order-edge[data-edge="left"] svg   { transform: rotate(270deg); }
-
-/* The label only on the active order; the arrows say enough for the queue. */
-.order:not(.is-active) .order-edge-label {
-  display: none;
-}
-
-.dispatch-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 13px;
-  color: var(--ink-muted);
-}
-
-.dispatch-status {
-  display: flex;
-  gap: 14px;
-}
-
-.dispatch-status b {
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
 
 .dispatch-next {
   display: flex;
   align-items: center;
   gap: 4px;
+  color: var(--ink-muted);
 }
 
 .next-label {
@@ -303,17 +331,6 @@
   font-size: 11px;
   font-weight: 700;
   opacity: 0.7;
-}
-
-.practice-tag {
-  padding: 0 6px;
-  border-radius: 4px;
-  background: var(--board-bg);
-  color: var(--ink-light);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 @media (prefers-reduced-motion: reduce) {
