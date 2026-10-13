@@ -98,6 +98,10 @@ is new and lightly tested.
   republish with the deploy. `--chrome` for the new pages measured at 412 px:
   201 / 310 with the leaderboard (name-entry state). Classic measured 391 with
   two badge rows against its 388 setting; not changed, worth a recheck.
+- **How to play cards** for Fib, Threes and Turtle (2026-10-12): a "?" beside
+  the theme toggle (Joseph picked option A from a mockup) opens a rules card
+  over the board. Tested in the pane: input is blocked while it is open, and
+  it closes with Got it, Escape or a tap outside. Not in the bundle.
 - **Dispatch: the shipping tile now draws above the others**: its z-index rule
   keys off the inner `.is-shipping` element via `:has()`, since the actuator
   rewrites the wrapper's classes a frame after adding it.

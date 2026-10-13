@@ -19,13 +19,14 @@
  *   the previous display mode. Offline, the cached copy still answers.
  */
 
-var CACHE = "2048-pixel-69d0644f0d";
+var CACHE = "2048-pixel-a34bc57c37";
 
 var SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./style/main.css",
+  "./style/how_to_play.css",
   "./style/fonts/ClearSans-Light-webfont.woff",
   "./style/fonts/ClearSans-Regular-webfont.woff",
   "./style/fonts/ClearSans-Bold-webfont.woff",
@@ -39,6 +40,7 @@ var SHELL = [
   "./js/local_storage_manager.js",
   "./js/game_manager.js",
   "./js/theme.js",
+  "./js/how_to_play.js",
   "./js/palette.js",
   "./js/leaderboard-config.js",
   "./js/leaderboard.js",

@@ -301,6 +301,11 @@ Turtle), each on its own page with its own saved game, best score and
 leaderboard. Classic's own files are untouched; the up guard and Auto-fill
 stay classic-only. `node tools/test_variants.js` runs their rule tests.
 
+Each of the three has a "?" beside the theme toggle (`js/how_to_play.js`,
+`style/how_to_play.css`) that opens a short rules card over the board. While
+it is open, swipes and keys stop at the window and never reach the game;
+"Got it", Escape or a tap outside closes it.
+
 **Fib** (`app/fib/`) is 2048 with Fibonacci tiles: two tiles merge when they
 are neighbours in the sequence (1 + 1, 1 + 2, 2 + 3, 3 + 5 …), new tiles are
 1s (90%) or 2s, and 2584 is the win. It inherits upstream's GameManager and
