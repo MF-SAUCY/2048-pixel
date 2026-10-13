@@ -246,6 +246,7 @@
       over: this.over,
       won: false,
       bestScore: this.storage.getBestScore(),
+      moves: this.moves,
       terminated: this.over,
       next: this.next
     });

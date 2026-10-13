@@ -47,10 +47,6 @@
         <h1 class="title">Dispatch</h1>
       </div>
       <div class="heading-side">
-        <div class="scores-container">
-          <div class="score-container">0</div>
-          <div class="best-container">0</div>
-        </div>
         <div class="above-game">
           <a class="restart-button" href="#" role="button">Restart</a>
         </div>
@@ -58,10 +54,16 @@
     </div>
 
     <section class="dispatch-panel" aria-label="Orders">
-      <ol class="dispatch-orders"></ol>
+      <div class="dispatch-row">
+        <div class="dispatch-active">
+          <span class="dispatch-active-chip"></span>
+          <span class="dispatch-moves"><span class="dispatch-moves-value">100</span></span>
+        </div>
+        <div class="dispatch-shipped">0/8</div>
+      </div>
       <div class="dispatch-meta">
-        <div class="dispatch-status"></div>
         <div class="dispatch-next"></div>
+        <ol class="dispatch-orders" aria-label="Orders after this one"></ol>
       </div>
     </section>
 

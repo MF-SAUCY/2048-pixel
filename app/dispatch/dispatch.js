@@ -52,6 +52,8 @@
   var SIZE = 4;
   var ORDER_COUNT = 8;
   var TURN_LIMIT = 100;
+  // From this many moves left, the active order's pill turns to the title colour.
+  var LOW_MOVES = 10;
   var SHIP_POINTS = 100;
   // Order sizes as powers of two, lightly shuffled per day: 8, 8, 16, 16, 16,
   // 32, 32, 64 before shuffling.
@@ -439,11 +441,7 @@
     }
 
     if (!this.actuator) return;
-    var best = this.bestToday();
     this.actuator.actuate(this.grid, {
-      // The score box shows turns left, and the best box today's best run.
-      score: TURN_LIMIT - this.turn,
-      bestScore: describeRun(best),
       over: this.over,
       won: this.won,
       terminated: this.isGameTerminated(),
@@ -464,7 +462,10 @@
     HTMLActuator.call(this);
     this.board = document.querySelector(".game-container");
     this.orderList = document.querySelector(".dispatch-orders");
-    this.statusEl = document.querySelector(".dispatch-status");
+    this.activeEl = document.querySelector(".dispatch-active");
+    this.activeChip = document.querySelector(".dispatch-active-chip");
+    this.movesValue = document.querySelector(".dispatch-moves-value");
+    this.shippedEl = document.querySelector(".dispatch-shipped");
     this.nextEl = document.querySelector(".dispatch-next");
     this.bayBar = document.createElement("div");
     this.bayBar.className = "bay-bar";
@@ -486,16 +487,10 @@
            value + "</span>";
   }
 
-  // Plain numbers: turns only go down within a run, and a restart sending them
-  // back up to 100 is not a gain worth a "+" pop.
-  DispatchActuator.prototype.updateScore = function (turnsLeft) {
-    this.clearContainer(this.scoreContainer);
-    this.scoreContainer.textContent = turnsLeft;
-  };
-
-  DispatchActuator.prototype.updateBestScore = function (text) {
-    this.bestContainer.textContent = text;
-  };
+  // No score or best boxes here: moves left sit beside the active order, and
+  // the day's best is on the leaderboard.
+  DispatchActuator.prototype.updateScore = function () {};
+  DispatchActuator.prototype.updateBestScore = function () {};
 
   DispatchActuator.prototype.actuate = function (grid, meta) {
     var self = this;
@@ -538,17 +533,26 @@
     });
   };
 
+  // The active order is just its tile: the lit bays on the board say where it
+  // goes. The two after it keep their arrows, since their bays are not lit yet.
   DispatchActuator.prototype.renderOrders = function (meta) {
+    var active = meta.orders[meta.shipped];
+    this.activeChip.innerHTML = active ? chip(active.value) : "";
+    this.activeChip.setAttribute("aria-label",
+      active ? "Ship a " + active.value + " out the " + active.edge : "All orders shipped");
+    this.movesValue.textContent = meta.turnsLeft;
+    this.activeEl.classList.toggle("is-low",
+      !meta.terminated && meta.turnsLeft <= LOW_MOVES);
+    this.shippedEl.textContent = meta.shipped + "/" + meta.orders.length;
+
     var html = "";
-    for (var i = 0; i < 3; i++) {
+    for (var i = 1; i < 3; i++) {
       var order = meta.orders[meta.shipped + i];
       if (!order) break;
-      html += '<li class="order' + (i === 0 ? " is-active" : "") + '">' +
-              chip(order.value) +
-              '<span class="order-edge" data-edge="' + order.edge + '">' + ARROW +
-              '<span class="order-edge-label">' + order.edge + "</span></span></li>";
+      html += '<li class="order">' + chip(order.value) +
+              '<span class="order-edge" data-edge="' + order.edge + '" aria-label="' +
+              order.edge + '">' + ARROW + "</span></li>";
     }
-    if (!html) html = '<li class="order is-done">All orders shipped</li>';
     this.orderList.innerHTML = html;
   };
 
@@ -579,12 +583,6 @@
   };
 
   DispatchActuator.prototype.renderStatus = function (meta) {
-    this.statusEl.innerHTML =
-      "<span><b>" + meta.shipped + "</b>/" + meta.orders.length + " shipped</span>" +
-      (meta.attempt === "practice"
-        ? '<span class="practice-tag" title="Today’s full run already counted; a better one shows as your best today">Practice</span>'
-        : "");
-
     this.nextEl.innerHTML = meta.upcoming.length
       ? '<span class="next-label">Next</span>' + meta.upcoming.map(function (v) {
           return '<span class="next-chip" data-v="' + v + '" style="--c: var(--t' + v + ')">' + v + "</span>";
@@ -595,7 +593,7 @@
   DispatchActuator.prototype.message = function (won) {
     var type = won ? "game-won" : "game-over";
     var text = won ? "All shipped!"
-             : this.reason === "turns" ? "Out of turns"
+             : this.reason === "turns" ? "Out of moves"
              : "Jammed";
     this.messageContainer.classList.add(type);
     var p = this.messageContainer.getElementsByTagName("p")[0];
@@ -603,8 +601,8 @@
     if (won) {
       var spare = document.createElement("span");
       spare.className = "message-spare";
-      spare.textContent = this.turnsLeft === 1 ? "1 turn to spare"
-                                               : this.turnsLeft + " turns to spare";
+      spare.textContent = this.turnsLeft === 1 ? "1 move to spare"
+                                               : this.turnsLeft + " moves to spare";
       p.appendChild(spare);
     }
   };

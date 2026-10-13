@@ -364,7 +364,8 @@ h1.title {
 }
 
 .score-container,
-.best-container {
+.best-container,
+.moves-container {
   position: relative;
   display: flex;
   flex-direction: column-reverse;
@@ -381,9 +382,10 @@ h1.title {
   text-align: center;
 }
 
-/* "Score" / "Best" caption; column-reverse puts it above the number. */
+/* "Score" / "Best" / "Moves" caption; column-reverse puts it above the number. */
 .score-container::after,
-.best-container::after {
+.best-container::after,
+.moves-container::after {
   content: "Score";
   color: var(--score-label);
   font-size: 11px;
@@ -394,6 +396,10 @@ h1.title {
 
 .best-container::after {
   content: "Best";
+}
+
+.moves-container::after {
+  content: "Moves";
 }
 
 .score-container .score-addition {
@@ -509,7 +515,8 @@ body,
 .game-container,
 .grid-cell,
 .score-container,
-.best-container {
+.best-container,
+.moves-container {
   transition-property: background-color, color;
   transition-duration: 240ms;
   transition-timing-function: ease;
@@ -1096,7 +1103,7 @@ body,
       <div class="heading-side">
         <div class="scores-container">
           <div class="score-container">0</div>
-          <div class="best-container">0</div>
+          <div class="moves-container">0</div>
         </div>
         <div class="above-game">
           <a class="restart-button" href="#" role="button">New Game</a>
@@ -1533,6 +1540,7 @@ function HTMLActuator() {
   this.tileContainer    = document.querySelector(".tile-container");
   this.scoreContainer   = document.querySelector(".score-container");
   this.bestContainer    = document.querySelector(".best-container");
+  this.movesContainer   = document.querySelector(".moves-container");
   this.messageContainer = document.querySelector(".game-message");
 
   this.score = 0;
@@ -1554,6 +1562,7 @@ HTMLActuator.prototype.actuate = function (grid, metadata) {
 
     self.updateScore(metadata.score);
     self.updateBestScore(metadata.bestScore);
+    self.updateMoves(metadata.moves);
 
     if (metadata.terminated) {
       if (metadata.over) {
@@ -1651,8 +1660,14 @@ HTMLActuator.prototype.updateScore = function (score) {
   }
 };
 
+// Classic shows a move counter in place of the best box (the leaderboard
+// already shows the best); the other pages keep the best box.
 HTMLActuator.prototype.updateBestScore = function (bestScore) {
-  this.bestContainer.textContent = bestScore;
+  if (this.bestContainer) this.bestContainer.textContent = bestScore;
+};
+
+HTMLActuator.prototype.updateMoves = function (moves) {
+  if (this.movesContainer) this.movesContainer.textContent = moves || 0;
 };
 
 HTMLActuator.prototype.message = function (won) {
@@ -1928,12 +1943,15 @@ GameManager.prototype.setup = function () {
     this.over        = previousState.over;
     this.won         = previousState.won;
     this.keepPlaying = previousState.keepPlaying;
+    // Games saved before the move counter existed start counting from here.
+    this.moves       = previousState.moves || 0;
   } else {
     this.grid        = new Grid(this.size);
     this.score       = 0;
     this.over        = false;
     this.won         = false;
     this.keepPlaying = false;
+    this.moves       = 0;
 
     // Add the initial tiles
     this.addStartTiles();
@@ -1978,6 +1996,7 @@ GameManager.prototype.actuate = function () {
     over:       this.over,
     won:        this.won,
     bestScore:  this.storageManager.getBestScore(),
+    moves:      this.moves,
     terminated: this.isGameTerminated()
   });
 
@@ -1990,7 +2009,8 @@ GameManager.prototype.serialize = function () {
     score:       this.score,
     over:        this.over,
     won:         this.won,
-    keepPlaying: this.keepPlaying
+    keepPlaying: this.keepPlaying,
+    moves:       this.moves
   };
 };
 
@@ -2065,6 +2085,7 @@ GameManager.prototype.move = function (direction) {
   });
 
   if (moved) {
+    this.moves += 1;
     this.addRandomTile();
 
     if (!this.movesAvailable()) {

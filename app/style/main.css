@@ -361,7 +361,8 @@ h1.title {
 }
 
 .score-container,
-.best-container {
+.best-container,
+.moves-container {
   position: relative;
   display: flex;
   flex-direction: column-reverse;
@@ -378,9 +379,10 @@ h1.title {
   text-align: center;
 }
 
-/* "Score" / "Best" caption; column-reverse puts it above the number. */
+/* "Score" / "Best" / "Moves" caption; column-reverse puts it above the number. */
 .score-container::after,
-.best-container::after {
+.best-container::after,
+.moves-container::after {
   content: "Score";
   color: var(--score-label);
   font-size: 11px;
@@ -391,6 +393,10 @@ h1.title {
 
 .best-container::after {
   content: "Best";
+}
+
+.moves-container::after {
+  content: "Moves";
 }
 
 .score-container .score-addition {
@@ -506,7 +512,8 @@ body,
 .game-container,
 .grid-cell,
 .score-container,
-.best-container {
+.best-container,
+.moves-container {
   transition-property: background-color, color;
   transition-duration: 240ms;
   transition-timing-function: ease;

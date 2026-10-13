@@ -43,6 +43,11 @@ fill whatever width they leave: about 82px on the Pixel, against upstream's
 fixed size. The height the footer freed goes back to the board wherever height
 is what limits it.
 
+**Moves, not Best.** The second box counts the swipes that moved something in
+the current game (saved with it as `moves`), since the leaderboard already
+shows the best score. Fib, Threes and Turtle do the same; the best score is
+still kept and posted on every page.
+
 **A guard against the back gesture.** Android's back gesture is a swipe in from
 either edge, which is also a left or right move started near the edge. A page
 cannot switch the gesture off, but it can catch it: with `back_guard.js`, the
@@ -260,7 +265,12 @@ in one of the edge's two middle cells ships off the board. A shipment opens the
 next order, and if a tile of that value is already sitting in one of its bays it
 ships too, on the same swipe. Eight orders, 100
 turns. There are no points: what counts is shipping all eight, then how many
-turns are left over, and the heading shows turns left and today's best run.
+turns are left over. On screen turns are called moves: the heading is just the
+title and buttons; under it a pill holds the active order's tile and the moves
+left (it turns the title colour for the last 10), with a Shipped box beside it,
+and a second row shows the next three incoming tiles and, on the right, the two
+orders after this one with arrows for their edges. The active order has no
+arrow, since its bays are lit on the board.
 (Runs are still ranked by one number underneath, 100 a shipment plus the unused
 turns if all eight ship, which sorts exactly that way; it is what the table
 stores.) Merges count for nothing, so a 64 made when the order wants a 32 is an
@@ -277,11 +287,10 @@ attempt counts, and the day's result is the best attempt so far: a worse retry
 never lowers it, and a tie keeps the earlier one. An attempt ends when the run
 does or is restarted after any move, which is why Restart asks for a second tap
 from the first move on. Restart replays the same run with every tile arriving
-where it did before, so once a full run is in, later goes are marked Practice
-and never change the day's result. A practice run that finishes with more turns
-left than the counted one is kept as the day's **best run**: it shows in the
-heading's Best today box and under the player's row on the board, but never
-ranks. The Dispatch page's leaderboard shows today's result — shipped count
+where it did before, so once a full run is in, later goes are practice (not
+marked on screen) and never change the day's result. A practice run that
+finishes with more turns left than the counted one is kept as the day's **best
+run**: it shows under the player's row on the board, but never ranks. The Dispatch page's leaderboard shows today's result — shipped count
 (green once all 8 ship) and turns left, or "not played yet" — and nothing
 all-time, since every day is a different puzzle.
 
