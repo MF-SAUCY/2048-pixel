@@ -5,13 +5,28 @@
    there is one, at its tallest: both rows carrying a "best" line. Measured in
    the browser at 412px wide; the one-line heading (2026-10-12) took 69px off
    both. The :has() rule has to restate classic's, which it would otherwise
-   lose to on specificity. */
+   lose to on specificity.
+   These budget for the orders row wrapped onto two lines, as it is on a page
+   under 384px wide. Once the screen is tall enough that the board, and so the
+   page, is at least 384px wide, the row is one line and 26px shorter. */
 @media (min-height: 561px) {
   :root {
     --chrome: 229px;
   }
   :root:has(.leaderboard) {
     --chrome: 367px;
+  }
+}
+
+@media (min-height: 589px) {
+  :root {
+    --chrome: 203px;
+  }
+}
+
+@media (min-height: 725px) {
+  :root:has(.leaderboard) {
+    --chrome: 341px;
   }
 }
 
@@ -28,9 +43,11 @@
 }
 
 /* ---- orders ----
-   Two rows above the board: the active order with the moves left beside it,
-   and the shipped count; then the next three incoming tiles and the two
-   orders after this one. Moves left and shipped use the score boxes' look. */
+   One row above the board: the active order with the moves left beside it,
+   the shipped count, then, stacked at the right, the next three incoming
+   tiles over the two orders after this one. Moves left and shipped use the
+   score boxes' look. On a page too narrow for all of it, the stack drops to
+   a line of its own. */
 
 .dispatch-panel {
   display: flex;
@@ -43,6 +60,7 @@
   display: flex;
   align-items: stretch;
   gap: 6px;
+  min-height: 60px;
 }
 
 .dispatch-active,
@@ -61,8 +79,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-right: auto;
-  padding: 6px 14px 6px 6px;
+  padding: 6px 14px 6px 8px;
 }
 
 /* The last few moves: the pill takes the title colour, in both themes. */
@@ -102,6 +119,7 @@
   letter-spacing: 0.06em;
   line-height: 1.4;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .dispatch-moves::after {
@@ -115,6 +133,32 @@
 .dispatch-active.is-low .dispatch-moves::after {
   color: inherit;
   opacity: 0.8;
+}
+
+/* The next tiles over the queued orders, right-aligned. */
+.dispatch-previews {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* Too narrow for one row (it needs about 383px): the stack becomes a line
+   under the pill. */
+@container (max-width: 383px) {
+  .dispatch-row {
+    flex-wrap: wrap;
+  }
+
+  .dispatch-previews {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 /* A page squeezed by a short screen: shorter caption, tighter pill. */
@@ -132,14 +176,6 @@
     min-width: 0;
     padding: 6px 10px;
   }
-}
-
-.dispatch-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 24px;
 }
 
 .dispatch-orders {
@@ -208,14 +244,6 @@
   align-items: center;
   gap: 4px;
   color: var(--ink-muted);
-}
-
-.next-label {
-  margin-right: 2px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .next-chip {
