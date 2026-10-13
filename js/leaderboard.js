@@ -19,12 +19,14 @@
  *   other that is the right trade, and it is why nothing here is presented as
  *   authoritative.
  *
- *   Two boards, one row per player. On the classic page it shows best scores and
- *   2048 / 4096 counts; on the Dispatch page it shows today's run (the first
- *   full run of the day, or the best attempt until there is one, which
- *   dispatch.js records) as shipments and turns left, with the day's best run
- *   under it when a later practice run beat it. Each page writes only its own
- *   columns, and the upsert leaves the other page's columns as they were.
+ *   One row per player, a board per page. On the classic page it shows best
+ *   scores and 2048 / 4096 counts; on the Dispatch page it shows today's run
+ *   (the first full run of the day, or the best attempt until there is one,
+ *   which dispatch.js records) as shipments and turns left, with the day's best
+ *   run under it when a later practice run beat it. Fib, Threes and Turtle
+ *   each show a best score and top tile. Each page reads and writes only its
+ *   own columns, and the upsert leaves the other pages' columns as they were;
+ *   so a column added for one page can never break another page's read.
  */
 
 (function () {
@@ -33,11 +35,34 @@
   var ID_KEY = "2048-player-id";
   var NAME_KEY = "2048-player-name";
   var LINKED_KEY = "2048-linked";
-  var MODE = document.querySelector(".dispatch") ? "dispatch" : "classic";
+  // The variants: each keeps its best score (written by its own storage
+  // manager) and its top tile, in columns named after it.
+  var VARIANTS = {
+    fib: { best: "fib-best", top: "fib-top" },
+    threes: { best: "threes-best", top: "threes-top" },
+    turtle: { best: "turtle-best", top: "turtle-top" }
+  };
+  var MODE = document.querySelector(".dispatch") ? "dispatch"
+           : document.querySelector(".fib") ? "fib"
+           : document.querySelector(".threes") ? "threes"
+           : document.querySelector(".turtle") ? "turtle"
+           : "classic";
+  var VARIANT = VARIANTS[MODE] || null;
   var PENDING_KEYS = {
     classic: "2048-pending-score",
-    dispatch: "2048-pending-dispatch"
+    dispatch: "2048-pending-dispatch",
+    fib: "2048-pending-fib",
+    threes: "2048-pending-threes",
+    turtle: "2048-pending-turtle"
   };
+  var COLUMNS = {
+    classic: "best,games,best_tile,wins_2048,wins_4096",
+    dispatch: "dispatch_day,dispatch_score,dispatch_shipped,dispatch_done," +
+              "dispatch_best,dispatch_runs,dispatch_day_best"
+  };
+  Object.keys(VARIANTS).forEach(function (mode) {
+    COLUMNS[mode] = mode + "_best," + mode + "_top";
+  });
   var WINS_2048_KEY = "2048-wins-2048";
   var WINS_4096_KEY = "2048-wins-4096";
   var GAME_TOP_KEY = "2048-game-top";
@@ -52,6 +77,7 @@
   var listEl = null;
   var mine = { best: 0, games: 0, bestTile: 0, wins2048: 0, wins4096: 0 };
   var run = { day: null, score: 0, shipped: 0, done: false, dayBest: 0, best: 0, runs: 0 };
+  var variant = { best: 0, top: 0 };
   var writeTimer = null;
   var refreshTimer = null;
 
@@ -105,10 +131,8 @@
   }
 
   function fetchBoard() {
-    return fetch(endpoint("scores?select=player_id,name,best,games,best_tile," +
-                          "wins_2048,wins_4096,dispatch_day,dispatch_score," +
-                          "dispatch_shipped,dispatch_done,dispatch_best," +
-                          "dispatch_runs,dispatch_day_best&order=best.desc&limit=20"), {
+    return fetch(endpoint("scores?select=player_id,name," + COLUMNS[MODE] +
+                          "&limit=20"), {
       headers: headers({ Accept: "application/json" }),
       cache: "no-store"
     }).then(function (r) {
@@ -134,6 +158,12 @@
   /* ---- syncing ---- */
 
   function currentRow() {
+    if (VARIANT) {
+      var row = { player_id: playerId, name: playerName || "Player" };
+      row[MODE + "_best"] = variant.best;
+      row[MODE + "_top"] = variant.top;
+      return row;
+    }
     if (MODE === "dispatch") {
       return {
         player_id: playerId,
@@ -181,10 +211,14 @@
     });
   }
 
+  // Every page's queued row, in turn: a result queued offline on one page
+  // goes out from whichever page next gets through.
   function flush() {
-    return flushKey(PENDING_KEYS.classic).then(function () {
-      return flushKey(PENDING_KEYS.dispatch);
-    });
+    return Object.keys(PENDING_KEYS).reduce(function (chain, mode) {
+      return chain.then(function () {
+        return flushKey(PENDING_KEYS[mode]);
+      });
+    }, Promise.resolve());
   }
 
   function sync() {
@@ -227,6 +261,12 @@
   // (a count set by hand in the dashboard, say) take the table's number rather
   // than overwriting it with a smaller one on the next write.
   function adopt(row) {
+    if (VARIANT) {
+      variant.best = Math.max(variant.best, row[MODE + "_best"] || 0);
+      variant.top = Math.max(variant.top, row[MODE + "_top"] || 0);
+      write(VARIANT.top, String(variant.top));
+      return;
+    }
     if (MODE === "dispatch") {
       if (read(LINKED_KEY)) adoptLinkedDay(row);
       run.best = Math.max(run.best, row.dispatch_best || 0);
@@ -416,6 +456,10 @@
       renderDispatch(rows);
       return;
     }
+    if (VARIANT) {
+      renderVariant(rows);
+      return;
+    }
     rows.sort(function (a, b) { return (b.best || 0) - (a.best || 0); });
 
     listEl.innerHTML = rows.map(function (r, i) {
@@ -425,6 +469,24 @@
              '<span class="lb-name">' + esc(r.name || "Player") + "</span>" +
              milestones(r) +
              '<span class="lb-score">' + (r.best || 0).toLocaleString() +
+             "</span></li>";
+    }).join("");
+  }
+
+  /* ---- Fib, Threes and Turtle boards ---- */
+
+  // Best score, with the top tile reached in that mode in the classic pill.
+  function renderVariant(rows) {
+    var bestKey = MODE + "_best";
+    var topKey = MODE + "_top";
+    rows.sort(function (a, b) { return (b[bestKey] || 0) - (a[bestKey] || 0); });
+    listEl.innerHTML = rows.map(function (r, i) {
+      var isMine = r.player_id === playerId;
+      return '<li class="lb-row' + (isMine ? " is-me" : "") + '">' +
+             '<span class="lb-rank">' + (i + 1) + "</span>" +
+             '<span class="lb-name">' + esc(r.name || "Player") + "</span>" +
+             '<span class="lb-tile">' + (r[topKey] || "—") + "</span>" +
+             '<span class="lb-score">' + (r[bestKey] || 0).toLocaleString() +
              "</span></li>";
     }).join("");
   }
@@ -499,6 +561,27 @@
     return top;
   }
 
+  // Fib, Threes and Turtle record only a best score and a top tile.
+  function hookVariant() {
+    if (typeof HTMLActuator === "undefined") return;
+    var actuate = HTMLActuator.prototype.actuate;
+    HTMLActuator.prototype.actuate = function (grid, metadata) {
+      actuate.call(this, grid, metadata);
+      var changed = false;
+      var top = highestTile(grid);
+      if (top > variant.top) {
+        variant.top = top;
+        write(VARIANT.top, String(top));
+        changed = true;
+      }
+      if (metadata.score > variant.best) {
+        variant.best = metadata.score;
+        changed = true;
+      }
+      if (changed) syncSoon();
+    };
+  }
+
   function hook() {
     if (typeof HTMLActuator === "undefined") return;
 
@@ -568,8 +651,9 @@
     var match = /[?&]link=([0-9A-Za-z-]{8,64})(?:&|$)/.exec(location.search);
     if (!match) return false;
     write(ID_KEY, match[1]);
-    write(PENDING_KEYS.classic, null);
-    write(PENDING_KEYS.dispatch, null);
+    Object.keys(PENDING_KEYS).forEach(function (mode) {
+      write(PENDING_KEYS[mode], null);
+    });
     write("dispatch-first", null);
     write("dispatch-day-best", null);
     write("dispatch-state", null);
@@ -593,6 +677,10 @@
     mine.bestTile = parseInt(read("2048-best-tile") || "0", 10) || 0;
     mine.wins2048 = parseInt(read(WINS_2048_KEY) || "0", 10) || 0;
     mine.wins4096 = parseInt(read(WINS_4096_KEY) || "0", 10) || 0;
+    if (VARIANT) {
+      variant.best = parseInt(read(VARIANT.best) || "0", 10) || 0;
+      variant.top = parseInt(read(VARIANT.top) || "0", 10) || 0;
+    }
 
     if (!build()) return;
     if (MODE === "dispatch") {
@@ -603,6 +691,8 @@
         loadRun();
         syncSoon();
       });
+    } else if (VARIANT) {
+      hookVariant();
     } else {
       hook();
     }

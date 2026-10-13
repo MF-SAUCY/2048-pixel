@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Turtle · 2048</title>
+  <meta name="description" content="Turtle: 2048 on a hexagonal board shaped like a turtle shell, with six swipe directions.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#faf8ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+
+  <script>
+    // Same pre-paint theme as the classic page, so night play does not flash
+    // cream. The Original palette is classic's alone: its ink rules are keyed
+    // to classic's values.
+    try {
+      var t = localStorage.getItem("2048-theme");
+      if (t === "light" || t === "dark") {
+        document.documentElement.setAttribute("data-theme", t);
+        var c = t === "dark" ? "#14110e" : "#faf8ef";
+        var m = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < m.length; i++) m[i].setAttribute("content", c);
+      }
+    } catch (e) {}
+  </script>
+
+  <link rel="stylesheet" href="../style/main.css">
+  <link rel="stylesheet" href="turtle.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="icon" href="../icons/icon-192.png" sizes="192x192">
+
+  <style>
+    body {
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container turtle">
+    <div class="heading">
+      <div class="title-box">
+        <h1 class="title">Turtle</h1>
+      </div>
+      <div class="heading-side">
+        <div class="scores-container">
+          <div class="score-container">0</div>
+          <div class="best-container">0</div>
+        </div>
+        <div class="above-game">
+          <a class="restart-button" href="#" role="button">New Game</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-container">
+      <div class="game-message">
+        <p></p>
+        <div class="lower">
+          <a class="keep-playing-button" href="#" role="button">Keep going</a>
+          <a class="retry-button" href="#" role="button">Try again</a>
+        </div>
+      </div>
+
+      <div class="grid-container"></div>
+
+      <div class="tile-container"></div>
+    </div>
+
+    <nav class="game-switch" aria-label="Game">
+      <span class="palette-label">Game</span>
+      <div class="seg">
+        <a href="../">Classic</a>
+        <a href="../dispatch/">Dispatch</a>
+        <a href="../fib/">Fib</a>
+        <a href="../threes/">Threes</a>
+        <a href="./" aria-current="page">Turtle</a>
+      </div>
+    </nav>
+  </div>
+
+  <script src="../js/bind_polyfill.js"></script>
+  <script src="../js/classlist_polyfill.js"></script>
+  <script src="../js/animframe_polyfill.js"></script>
+  <script src="../js/input_manager.js"></script>
+  <script src="../js/html_actuator.js"></script>
+  <script src="../js/grid.js"></script>
+  <script src="../js/tile.js"></script>
+  <script src="../js/local_storage_manager.js"></script>
+  <script src="../js/game_manager.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/effects.js"></script>
+  <script src="../js/back_guard.js"></script>
+  <script src="../js/leaderboard-config.js"></script>
+  <script src="../js/leaderboard.js"></script>
+  <script src="turtle.js"></script>
+</body>
+</html>
