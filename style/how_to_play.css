@@ -1,0 +1,71 @@
+/* How to play (Fib, Threes, Turtle), layered on the classic stylesheet.
+ * how_to_play.js puts a "?" beside the theme toggle, styled as the toggle,
+ * and opens this card over the board, on the page's own ground colour, nearly
+ * opaque so the rules stay legible over a full board in both themes. */
+.howto-button {
+  font-family: inherit;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.howto {
+  position: absolute;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-board);
+  background: color-mix(in srgb, var(--ground) 95%, transparent);
+  animation: fade-in 140ms ease;
+}
+
+.howto[hidden] {
+  display: none;
+}
+
+.howto-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 86%;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.howto-card h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.howto-card p {
+  margin: 0;
+  font-weight: 400;
+}
+
+.howto-card b {
+  font-weight: 700;
+}
+
+.howto-close {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--button);
+  color: var(--ink-light);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 42px;
+  cursor: pointer;
+}
+
+.howto-close:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
