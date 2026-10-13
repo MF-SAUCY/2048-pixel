@@ -1,0 +1,124 @@
+/* Threes — layered on the classic stylesheet. Adds the Next box, the Threes
+   colours and the slide-in for new tiles. */
+
+/* Heading and game switch, plus the leaderboard when there is one (at its taller name-entry state). Measured
+   in the browser at 412px wide. */
+@media (min-height: 561px) {
+  :root {
+    --chrome: 201px;
+  }
+  :root:has(.leaderboard) {
+    --chrome: 310px;
+  }
+}
+
+.threes h1.title {
+  font-size: clamp(22px, calc(100cqi / 3.7), 90px);
+}
+
+/* A third box beside Score and Best, holding a small card in the coming
+   tile's colour. */
+.next-container {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--board-bg);
+  color: var(--ink-light);
+  font-size: clamp(17px, calc(var(--board) * 0.055), 26px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.next-container::after {
+  content: "Next";
+  color: var(--score-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.next-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.9em;
+  height: 1.15em;
+  margin-top: 2px;
+  border-radius: 3px;
+  background: var(--ink-light);
+  color: var(--tile-ink);
+  font-size: 1em;
+}
+
+.next-card[data-kind="1"] { background: var(--t8); }
+.next-card[data-kind="2"] { background: var(--t2048); }
+
+/* Classic's captions are long enough to crowd three boxes, so the boxes
+   tighten below about 340px of heading. */
+.threes .heading {
+  container-type: inline-size;
+}
+
+@container (max-width: 360px) {
+  .threes .score-container,
+  .threes .best-container {
+    min-width: 54px;
+    padding: 8px 8px;
+  }
+}
+
+/* Tiles: 1 blue and 2 red, both from the classic ramp; from 3 up, ivory
+   cards with the same near-black numerals. These restate classic's .tile-2
+   and the super tile, which mean other values there. */
+.threes .tile .tile-inner,
+.threes .tile-super .tile-inner {
+  --c: var(--ink-light);
+  color: var(--tile-ink);
+  box-shadow: none;
+}
+
+.threes .tile-1 .tile-inner { --c: var(--t8); }
+.threes .tile-2 .tile-inner { --c: var(--t2048); }
+
+.threes .tile-192 .tile-inner,
+.threes .tile-384 .tile-inner,
+.threes .tile-768 .tile-inner  { font-size: calc(var(--cell) * 0.42); }
+
+.threes .tile-1536 .tile-inner,
+.threes .tile-3072 .tile-inner,
+.threes .tile-6144 .tile-inner { font-size: calc(var(--cell) * 0.34); }
+
+/* A new tile slides in across the edge it enters by, in the swipe's
+   direction, instead of growing in place. */
+.threes .tile[data-enter] .tile-inner {
+  animation: enter-from 140ms var(--slide-ease);
+  animation-fill-mode: backwards;
+}
+
+.threes .tile[data-enter="up"]    .tile-inner { --from: 0, 70%; }
+.threes .tile[data-enter="down"]  .tile-inner { --from: 0, -70%; }
+.threes .tile[data-enter="left"]  .tile-inner { --from: 70%, 0; }
+.threes .tile[data-enter="right"] .tile-inner { --from: -70%, 0; }
+
+@keyframes enter-from {
+  0% {
+    opacity: 0;
+    transform: translate(var(--from));
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .threes .tile[data-enter] .tile-inner {
+    animation: none;
+  }
+}

@@ -294,6 +294,53 @@ the day's best practice run (`dispatch-day-best`). `dispatch-first-best` and
 60 runs using about 94 turns: incoming tiles add roughly 2.2 of value a turn and
 the orders need 192, so the run is an economy of value more than a race.
 
+## Fib, Threes and Turtle
+
+Three more modes on the Game switch (Classic · Dispatch · Fib · Threes ·
+Turtle), each on its own page with its own saved game, best score and
+leaderboard. Classic's own files are untouched; the up guard and Auto-fill
+stay classic-only. `node tools/test_variants.js` runs their rule tests.
+
+**Fib** (`app/fib/`) is 2048 with Fibonacci tiles: two tiles merge when they
+are neighbours in the sequence (1 + 1, 1 + 2, 2 + 3, 3 + 5 …), new tiles are
+1s (90%) or 2s, and 2584 is the win. It inherits upstream's GameManager and
+replaces only the merge rule, the new tile and the win. Tiles take the classic
+ramp one step per number: 1 has the 2's colour, up to 144 on the 2048 red;
+from 233 on they are the dark super tile.
+
+**Threes** (`app/threes/`) plays by the rules 2048 was copied from. A swipe
+moves each tile one cell at most, the line following as a train; 1 + 2 = 3 and
+from 3 up equal tiles merge. One new tile slides in on the edge the swipe moved
+away from, in a line that moved, drawn from a shuffled deck of four each of 1,
+2 and 3; once there is a 48 on the board, 1 draw in 21 is a bonus tile from 6
+up to an eighth of the biggest. The Next box shows the coming tile's colour
+(a "+" for a bonus). Nine tiles to start; the score is the board's, 3 to the
+power of each tile's step (3 is 3, 6 is 9, 12 is 27 …). 1s are classic's 8
+blue, 2s the 2048 red, 3 and up ivory (`--ink-light`).
+
+**Turtle** (`app/turtle/`) is 2048 on a 19-cell hexagon, flat side up, drawn as
+a turtle's shell: straight up and down plus four diagonals, picked from the
+swipe's angle (keys W/S or the arrows for up and down, Q E A D for the
+diagonals). Spawns, merges, scoring and the 2048 win are classic's. Cells live
+in a 5x5 array indexed by axial coordinate + 2, with the corners out of
+bounds, so upstream's Tile and HTMLActuator and the effects and leaderboard
+hooks work unchanged (effects.js asks the page for spark positions through
+`window.fxCellCenter`, and Fib and Threes name their spark colours through
+`window.fxTileToken`). Each new game draws one of four turtles, never the one
+just played:
+
+- **Sage** — sage skin (`#9aab7c` day, `#56654a` night), oval flippers.
+- **Reef Glider** — a sea turtle in teal (`#718f87` / `#536d66`) with marginal
+  seams; its front flippers stroke once after a merge of 256 or more.
+- **Garden Keeper** — a tortoise in the board's own browns; it draws its head
+  in at game over.
+- **Pocket Pal** — a hatchling (`#b5bd91` / `#87916b`) with its face on the
+  right; it blinks now and then.
+
+Sage was Claude's design, the other three Astra's. The movements are off under
+`prefers-reduced-motion`. The board is 1.04 times as tall as it is wide, so the
+page divides the height it has left by that.
+
 ## The leaderboard
 
 Two players, one shared table. It is deliberately the smallest thing that works:
@@ -375,6 +422,22 @@ and the day's best run (added 2026-10-10):
 alter table public.scores
   add column if not exists dispatch_day_best integer not null default 0;
 ```
+
+and Fib, Threes and Turtle, a best score and top tile each (added 2026-10-12;
+the same statement is in `tools/variant_columns.sql`):
+
+```sql
+alter table public.scores
+  add column if not exists fib_best    integer not null default 0,
+  add column if not exists fib_top     integer not null default 0,
+  add column if not exists threes_best integer not null default 0,
+  add column if not exists threes_top  integer not null default 0,
+  add column if not exists turtle_best integer not null default 0,
+  add column if not exists turtle_top  integer not null default 0;
+```
+
+Each page selects only its own columns, so a column missing for one mode
+leaves the other pages' boards working.
 
 ### What it records
 

@@ -85,6 +85,19 @@ is new and lightly tested.
 - **`tools/bot_classic.js`** (2026-10-12): an expectimax player that runs full
   classic games on the real GameManager. 17 of 18 games reached 8192 and 7
   reached 16384, which answered whether an 8192 can be made in normal play.
+- **Fib, Threes and Turtle modes** (2026-10-12, built, tested in the pane,
+  **not yet committed or deployed**). Three new pages on a five-way Game
+  switch; see README → "Fib, Threes and Turtle". Turtle draws one of four
+  turtle boards at random per new game (Sage, Reef Glider, Garden Keeper,
+  Pocket Pal; Joseph approved all four and their colours). Rule tests:
+  `node tools/test_variants.js` (23). **Before the deploy**, Joseph runs
+  `tools/variant_columns.sql` in Supabase; each page now selects only its own
+  columns, so until then only the three new boards fail, not classic or
+  Dispatch. `effects.js` gained two page hooks (`fxCellCenter`,
+  `fxTileToken`), so the bundle was rebuilt and the claude.ai artifact needs a
+  republish with the deploy. `--chrome` for the new pages measured at 412 px:
+  201 / 310 with the leaderboard (name-entry state). Classic measured 391 with
+  two badge rows against its 388 setting; not changed, worth a recheck.
 - **Dispatch: the shipping tile now draws above the others**: its z-index rule
   keys off the inner `.is-shipping` element via `:has()`, since the actuator
   rewrites the wrapper's classes a frame after adding it.
@@ -92,7 +105,8 @@ is new and lightly tested.
 ## Shipping a change
 
 1. Edit under `app/`. Run `node tools/test_dispatch.js` if Dispatch was
-   touched (24 tests; `--sim` adds the 60-day bot run, ~10 s).
+   touched (24 tests; `--sim` adds the 60-day bot run, ~10 s), and
+   `node tools/test_variants.js` for Fib, Threes or Turtle.
 2. Commit. The pre-commit hook (`.githooks/pre-commit` → `tools/stamp_sw.py`)
    stamps `CACHE` in `app/sw.js` from a fingerprint of everything staged under
    `app/`. **Never bump it by hand.** A fresh clone needs
@@ -215,6 +229,13 @@ columns and the ALTERs used are in README → "The leaderboard".
    come back since 2026-10-10 (see "Spark layer hidden when idle").
 8. **Dispatch "best N" line not yet seen in real use.** It appears only when a
    practice run beats the counted one.
+
+9. **New modes not yet played on a phone.** Ask how Threes' one-cell moves
+   and Turtle's six-way swipes feel, whether the sideways swipe picks the
+   diagonal she meant, and whether Turtle's 2048 is too easy or too hard on 19
+   cells with six directions (the classic bot could be adapted to measure it).
+   Fib's tiles above 144 are all the dark super tile; if that is too much dark
+   late in a game, extend the ramp (a colour change: show Joseph first).
 
 ## Known limits (not bugs)
 

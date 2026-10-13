@@ -2343,7 +2343,10 @@ GameManager.prototype.positionsEqual = function (first, second) {
   };
 
   // Centre of grid cell (x, y), both 0-indexed, in board CSS px.
+  // A page with another board shape (the turtle's hexagon) sets
+  // window.fxCellCenter(x, y, width) to place the sparks itself.
   Effects.prototype.cellCenter = function (x, y) {
+    if (window.fxCellCenter) return window.fxCellCenter(x, y, this.size);
     var b = this.size;
     return {
       x: (0.03 + x * 0.2425 + 0.10625) * b,
@@ -2352,7 +2355,9 @@ GameManager.prototype.positionsEqual = function (first, second) {
   };
 
   Effects.prototype.tileColor = function (value) {
-    var name = value > 2048 ? "--tsuper" : "--t" + value;
+    // Fib and Threes colour their values differently; they name the token.
+    var name = window.fxTileToken ? window.fxTileToken(value)
+             : value > 2048 ? "--tsuper" : "--t" + value;
     var css = getComputedStyle(document.documentElement)
       .getPropertyValue(name)
       .trim();

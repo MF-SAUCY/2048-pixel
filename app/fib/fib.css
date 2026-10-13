@@ -1,0 +1,86 @@
+/* Fib — layered on the classic stylesheet. Only the tile colours, numeral
+   sizes and the page's measured chrome differ. */
+
+/* Heading and game switch, plus the leaderboard when there is one (at its taller name-entry state). Measured
+   in the browser at 412px wide. The :has() rule restates classic's, which it
+   would otherwise lose to on specificity. */
+@media (min-height: 561px) {
+  :root {
+    --chrome: 201px;
+  }
+  :root:has(.leaderboard) {
+    --chrome: 310px;
+  }
+}
+
+/* "Fib" is narrower than "2048", so the fill-the-box sizing divides by less;
+   the clamp's ceiling keeps it level with the score boxes. */
+.fib h1.title {
+  font-size: clamp(24px, calc(100cqi / 1.9), 96px);
+}
+
+/* The classic ramp, one step per Fibonacci number: 1 takes the 2's colour, 2
+   the 4's, up to 144 on the 2048 red. These restate .tile-2 and .tile-8, which
+   mean other values in classic. */
+.fib .tile-1 .tile-inner    { --c: var(--t2); }
+.fib .tile-2 .tile-inner    { --c: var(--t4); }
+.fib .tile-3 .tile-inner    { --c: var(--t8); }
+.fib .tile-5 .tile-inner    { --c: var(--t16); }
+.fib .tile-8 .tile-inner    { --c: var(--t32); }
+.fib .tile-13 .tile-inner   { --c: var(--t64); }
+.fib .tile-21 .tile-inner   { --c: var(--t128); }
+.fib .tile-34 .tile-inner   { --c: var(--t256); }
+.fib .tile-55 .tile-inner   { --c: var(--t512); }
+.fib .tile-89 .tile-inner   { --c: var(--t1024); }
+.fib .tile-144 .tile-inner  { --c: var(--t2048); }
+
+/* Past 144 the ramp has run out, so the tile drops to the dark super tile as
+   classic does past 2048 (the actuator only marks .tile-super above 2048). */
+.fib .tile-233 .tile-inner,
+.fib .tile-377 .tile-inner,
+.fib .tile-610 .tile-inner,
+.fib .tile-987 .tile-inner,
+.fib .tile-1597 .tile-inner,
+.fib .tile-super .tile-inner {
+  --c: var(--tsuper);
+  color: var(--ink-light);
+}
+
+/* The same bloom as classic's top five tiles, on the same five colours. */
+.fib .tile-21 .tile-inner {
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 22%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.fib .tile-34 .tile-inner {
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 28%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.19);
+}
+.fib .tile-55 .tile-inner {
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 34%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+}
+.fib .tile-89 .tile-inner {
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 40%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.29);
+}
+.fib .tile-144 .tile-inner {
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--c) 48%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.33);
+}
+
+/* Numerals shrink as the digits multiply. */
+.fib .tile-144 .tile-inner,
+.fib .tile-233 .tile-inner,
+.fib .tile-377 .tile-inner,
+.fib .tile-610 .tile-inner,
+.fib .tile-987 .tile-inner  { font-size: calc(var(--cell) * 0.42); }
+
+.fib .tile-1597 .tile-inner,
+.fib .tile-2584 .tile-inner,
+.fib .tile-4181 .tile-inner,
+.fib .tile-6765 .tile-inner { font-size: calc(var(--cell) * 0.34); }
+
+.fib .tile-super .tile-inner { font-size: calc(var(--cell) * 0.29); }
+.fib .tile-2584 .tile-inner,
+.fib .tile-4181 .tile-inner,
+.fib .tile-6765 .tile-inner { font-size: calc(var(--cell) * 0.34); }
