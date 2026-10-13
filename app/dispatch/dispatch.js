@@ -584,7 +584,7 @@
 
   DispatchActuator.prototype.renderStatus = function (meta) {
     this.nextEl.innerHTML = meta.upcoming.length
-      ? '<span class="next-label">Next</span>' + meta.upcoming.map(function (v) {
+      ? meta.upcoming.map(function (v) {
           return '<span class="next-chip" data-v="' + v + '" style="--c: var(--t' + v + ')">' + v + "</span>";
         }).join("")
       : "";

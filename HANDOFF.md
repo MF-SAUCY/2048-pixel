@@ -109,8 +109,9 @@ is new and lightly tested.
   something, saved as `moves` in each game state; old saves start at 0)
   where Best was. Dispatch: one-line heading (title + buttons), then a pill
   with the active order's tile and "Moves left" (title colour at 10 or
-  fewer, `LOW_MOVES`) plus a Shipped box, then the next tiles and the two
-  queued orders (arrows, no label). The active order's arrow, the Best today
+  fewer, `LOW_MOVES`) plus a Shipped box, and at the right of the same row
+  the next tiles stacked over the two queued orders (arrows, no labels); under
+  384 px of page width that stack wraps to its own line. The active order's arrow, the Best today
   box and the Practice tag are gone; on-screen "turns" became "moves".
   Fable and Astra both reviewed the old layout; Joseph picked a mix of their
   two proposals from a mockup. Dispatch `--chrome` went down 69 px.
@@ -186,7 +187,8 @@ columns and the ALTERs used are in README → "The leaderboard".
 - **Measure `--chrome`, don't estimate it.** It's the height of everything but
   the board; set too low, short screens cut off the bottom. Values measured at
   412 px wide: classic 281 / 388 with leaderboard (since the Auto-fill row
-  went in and the credit line came out); Dispatch 229 / 367 (since the one-line heading, 2026-10-12). Recheck after any
+  went in and the credit line came out); Dispatch 229 / 367, or 203 / 341 once the screen is tall enough for the
+  one-line orders row (see the media queries in `dispatch.css`, 2026-10-12). Recheck after any
   change to the page furniture, at heights 915 → 640. Measure by summing the
   container's visible children, gaps and padding, minus the board: the
   container itself stretches to the viewport, so its own height is useless.

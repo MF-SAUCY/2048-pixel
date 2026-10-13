@@ -268,8 +268,9 @@ turns. There are no points: what counts is shipping all eight, then how many
 turns are left over. On screen turns are called moves: the heading is just the
 title and buttons; under it a pill holds the active order's tile and the moves
 left (it turns the title colour for the last 10), with a Shipped box beside it,
-and a second row shows the next three incoming tiles and, on the right, the two
-orders after this one with arrows for their edges. The active order has no
+and at the right of the same row the next three incoming tiles stacked over the
+two orders after this one, with arrows for their edges. A page under 384px wide
+puts that stack on a line of its own. The active order has no
 arrow, since its bays are lit on the board.
 (Runs are still ranked by one number underneath, 100 a shipment plus the unused
 turns if all eight ship, which sorts exactly that way; it is what the table
