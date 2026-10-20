@@ -1,32 +1,28 @@
 /* Dispatch — layered on the classic stylesheet, which supplies the board,
    tiles, colour ramp, themes and fonts. Only what Dispatch adds lives here. */
 
-/* Heading, orders panel and game switch, plus the leaderboard when
-   there is one, at its tallest: both rows carrying a "best" line. Measured in
-   the browser at 412px wide; the one-line heading (2026-10-12) took 69px off
-   both. The :has() rule has to restate classic's, which it would otherwise
-   lose to on specificity.
-   These budget for the orders row wrapped onto two lines, as it is on a page
-   under 384px wide. Once the screen is tall enough that the board, and so the
-   page, is at least 384px wide, the row is one line and 26px shorter. */
+/* Heading and orders panel, plus the leaderboard when there is one, at its
+   tallest: both rows carrying a "best" line. Measured in the browser at 412px
+   wide; the one-line heading (2026-10-12) took 69px off both, and moving the
+   game switch into the menu (2026-10-20) another 41px. The :has() rule has to
+   restate classic's, which it would otherwise lose to on specificity.
+   With the leaderboard, the first value budgets for the orders row wrapped
+   onto two lines, as it is on a page under 384px wide. Once the screen is
+   tall enough that the board, and so the page, is at least 384px wide, the
+   row is one line and 26px shorter. Without it, that height (546px) is
+   already below the landscape cut-off, so only the one-line value is left. */
 @media (min-height: 561px) {
   :root {
-    --chrome: 229px;
+    --chrome: 162px;
   }
   :root:has(.leaderboard) {
-    --chrome: 367px;
+    --chrome: 326px;
   }
 }
 
-@media (min-height: 589px) {
-  :root {
-    --chrome: 203px;
-  }
-}
-
-@media (min-height: 725px) {
+@media (min-height: 684px) {
   :root:has(.leaderboard) {
-    --chrome: 341px;
+    --chrome: 300px;
   }
 }
 

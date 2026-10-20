@@ -63,8 +63,7 @@
   };
 
   function init() {
-    var anchor = document.querySelector(".palette-switch") ||
-                 document.querySelector(".game-switch");
+    var anchor = document.querySelector(".palette-switch");
     var container = document.querySelector(".container");
     if (!anchor && !container) return;
 

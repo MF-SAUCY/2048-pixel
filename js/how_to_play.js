@@ -1,8 +1,8 @@
-/* How to play, for Fib, Threes and Turtle.
+/* How to play, for Fib, Threes and 🐢48.
  *
- * A "?" button beside the theme toggle opens a short rules card over the
- * board; "Got it", Escape or a tap outside the card closes it. While it is
- * open, swipes and keys go to the card, not the game: a capture listener on
+ * How to play, first in the menu (game_menu.js), opens a short rules card
+ * over the board; "Got it", Escape or a tap outside the card closes it. While
+ * it is open, swipes and keys go to the card, not the game: a capture listener on
  * the window stops them before the input manager, which listens on the
  * document, ever sees them.
  *
@@ -44,18 +44,8 @@
     Object.keys(CARDS).forEach(function (name) {
       if (document.querySelector(".container." + name)) mode = name;
     });
-    var row = document.querySelector(".above-game");
     var board = document.querySelector(".game-container");
-    if (!mode || !row || !board) return;
-
-    var button = document.createElement("button");
-    button.type = "button";
-    button.className = "theme-toggle howto-button";
-    button.textContent = "?";
-    button.setAttribute("aria-label", "How to play");
-    button.setAttribute("title", "How to play");
-    button.setAttribute("aria-haspopup", "dialog");
-    row.insertBefore(button, row.firstChild);
+    if (!mode || !board || !window.GameMenu) return;
 
     var card = document.createElement("div");
     card.className = "howto";
@@ -110,10 +100,15 @@
       EVENTS.forEach(function (type) {
         window.removeEventListener(type, swallow, true);
       });
-      button.focus();
+      window.GameMenu.focus();
     }
 
-    button.addEventListener("click", show);
+    window.GameMenu.add({
+      first: true,
+      label: function () { return "How to play"; },
+      icon: function () { return "?"; },
+      run: show
+    });
     close.addEventListener("click", hide);
   }
 

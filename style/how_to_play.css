@@ -1,14 +1,7 @@
-/* How to play (Fib, Threes, Turtle), layered on the classic stylesheet.
- * how_to_play.js puts a "?" beside the theme toggle, styled as the toggle,
- * and opens this card over the board, on the page's own ground colour, nearly
- * opaque so the rules stay legible over a full board in both themes. */
-.howto-button {
-  font-family: inherit;
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 1;
-}
-
+/* How to play (Fib, Threes, 🐢48), layered on the classic stylesheet.
+ * how_to_play.js opens this card from the menu, over the board, on the page's
+ * own ground colour, nearly opaque so the rules stay legible over a full
+ * board in both themes. */
 .howto {
   position: absolute;
   inset: 0;
