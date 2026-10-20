@@ -36,8 +36,8 @@ the margin still moves tiles.
 
 **No instructions on screen.** Upstream's "Join the numbers…" tagline and its
 how-to-play paragraph are gone, and so is the credit line (the MIT notice ships
-in `app/LICENSE.txt`); the footer is just the Game, Tiles and Auto-fill switches.
-The scores and the controls row (theme toggle, New Game) stack on the right, and
+in `app/LICENSE.txt`); the footer is just the Tiles and Auto-fill switches.
+The scores and the controls row (New Game, menu) stack on the right, and
 the logo takes the left at the height of both, sized with a container query to
 fill whatever width they leave: about 82px on the Pixel, against upstream's
 fixed size. The height the footer freed goes back to the board wherever height
@@ -45,7 +45,7 @@ is what limits it.
 
 **Moves, not Best.** The second box counts the swipes that moved something in
 the current game (saved with it as `moves`), since the leaderboard already
-shows the best score. Fib, Threes and Turtle do the same; the best score is
+shows the best score. Fib, Threes and 🐢48 do the same; the best score is
 still kept and posted on every page.
 
 **A guard against the back gesture.** Android's back gesture is a swipe in from
@@ -159,9 +159,17 @@ since every stop is a mid-lightness saturated colour that holds against a cream
 board and a near-black one alike — something the old ramp could not claim, as its
 2 and 4 were near-white and had to be darkened separately for night play. The
 ground is a warm near-black rather than a neutral grey, which next to this board
-would read as dirty. The toggle is injected by `theme.js` at runtime, so hosts
-that own the page theme get the themed game without a control fighting them for
-it.
+would read as dirty. The toggle is a row in the menu, added by `theme.js` at
+runtime, so hosts that own the page theme get the themed game without a control
+fighting them for it.
+
+**The menu.** A button beside New Game on every page (`js/game_menu.js`,
+2026-10-20) opens a list of the five games, the current one marked, then the
+page's extras: How to play on Fib, Threes and 🐢48, and the day/night switch
+everywhere. It replaced the Game switch row under the board, which gave the
+board back 41px of height. While it is open, a tap or swipe outside only
+closes it, and Escape closes it too. The bundle has no menu: it is classic
+alone.
 
 **Offline and installable.** A service worker precaches the whole shell — a dozen
 small files — and serves it cache-first, so the game works in airplane mode once
@@ -257,8 +265,8 @@ network-first, so reload twice.
 
 ## Dispatch, a harder spinoff
 
-`app/dispatch/` is a second game on the same engine, chosen with the Game switch
-(Classic / Dispatch) under the board on either page. Classic asks for the biggest tile; Dispatch asks for the right
+`app/dispatch/` is a second game on the same engine, chosen from the menu
+beside New Game on any page. Classic asks for the biggest tile; Dispatch asks for the right
 one. Tiles slide and merge exactly as in 2048, but there is always an order — a
 value and an edge, like "32 → left" — and a tile of that value that ends a swipe
 in one of the edge's two middle cells ships off the board. A shipment opens the
@@ -304,15 +312,16 @@ the day's best practice run (`dispatch-day-best`). `dispatch-first-best` and
 60 runs using about 94 turns: incoming tiles add roughly 2.2 of value a turn and
 the orders need 192, so the run is an economy of value more than a race.
 
-## Fib, Threes and Turtle
+## Fib, Threes and 🐢48
 
-Three more modes on the Game switch (Classic · Dispatch · Fib · Threes ·
-Turtle), each on its own page with its own saved game, best score and
+Three more modes in the menu (Classic · Dispatch · Fib · Threes · 🐢48, which
+was called Turtle until 2026-10-20), each on its own page with its own saved game, best score and
 leaderboard. Classic's own files are untouched; the up guard and Auto-fill
 stay classic-only. `node tools/test_variants.js` runs their rule tests.
 
-Each of the three has a "?" beside the theme toggle (`js/how_to_play.js`,
-`style/how_to_play.css`) that opens a short rules card over the board. While
+Each of the three has How to play at the top of its menu
+(`js/how_to_play.js`, `style/how_to_play.css`), which opens a short rules card
+over the board. While
 it is open, swipes and keys stop at the window and never reach the game;
 "Got it", Escape or a tap outside closes it.
 
@@ -333,7 +342,7 @@ up to an eighth of the biggest. The Next box shows the coming tile's colour
 power of each tile's step (3 is 3, 6 is 9, 12 is 27 …). 1s are classic's 8
 blue, 2s the 2048 red, 3 and up ivory (`--ink-light`).
 
-**Turtle** (`app/turtle/`) is 2048 on a 19-cell hexagon, flat side up, drawn as
+**🐢48** (`app/turtle/`; code and storage keys still say turtle) is 2048 on a 19-cell hexagon, flat side up, drawn as
 a turtle's shell: straight up and down plus four diagonals, picked from the
 swipe's angle (keys W/S or the arrows for up and down, Q E A D for the
 diagonals). Spawns, merges, scoring and the 2048 win are classic's. Cells live
@@ -353,8 +362,20 @@ just played:
   right; it blinks now and then.
 
 Sage was Claude's design, the other three Astra's. The movements are off under
-`prefers-reduced-motion`. The board is 1.04 times as tall as it is wide, so the
-page divides the height it has left by that.
+`prefers-reduced-motion`.
+
+**The pad** (2026-10-20). Six swipe directions made it hard to be sure where a
+swipe would go, so a hexagonal pad sits under the board: six wedges, each
+pointing at the board side it moves toward, in New Game's brown. The wedge a
+swipe or key picked lights up (it turns pale and sinks a little), so a
+swipe shows how it was read. Holding a wedge repeats the move, and so does
+holding a swipe: once a swipe is 30px out it moves without waiting for the
+lift, and from there it works like classic's Auto-fill does for down, in any
+of the six directions: a pause of 0.35 s, then a move every 0.2 s, stopping as
+soon as a move changes nothing. Always on, with no switch.
+
+The board is 1.04 times as tall as it is wide and the pad 0.366 board widths
+tall, so the page divides the height it has left by 1.406.
 
 ## The leaderboard
 
@@ -438,7 +459,7 @@ alter table public.scores
   add column if not exists dispatch_day_best integer not null default 0;
 ```
 
-and Fib, Threes and Turtle, a best score and top tile each (added 2026-10-12;
+and Fib, Threes and 🐢48, a best score and top tile each (added 2026-10-12;
 the same statement is in `tools/variant_columns.sql`):
 
 ```sql

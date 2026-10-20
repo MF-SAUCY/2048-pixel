@@ -1,15 +1,15 @@
 /* Fib — layered on the classic stylesheet. Only the tile colours, numeral
    sizes and the page's measured chrome differ. */
 
-/* Heading and game switch, plus the leaderboard when there is one (at its taller name-entry state). Measured
+/* Heading, plus the leaderboard when there is one (at its taller name-entry state). Measured
    in the browser at 412px wide. The :has() rule restates classic's, which it
    would otherwise lose to on specificity. */
 @media (min-height: 561px) {
   :root {
-    --chrome: 201px;
+    --chrome: 160px;
   }
   :root:has(.leaderboard) {
-    --chrome: 310px;
+    --chrome: 269px;
   }
 }
 

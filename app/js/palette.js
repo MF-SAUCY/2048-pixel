@@ -47,11 +47,9 @@
     var current = stored();
     apply(current);
 
-    // Under the Classic / Dispatch switch when the page has one, so the two
-    // preferences sit together; otherwise (the single-file bundle) at the foot.
-    var anchor = document.querySelector(".game-switch");
+    // At the foot of the page, under the board and any leaderboard.
     var container = document.querySelector(".container");
-    if (!anchor && !container) return;
+    if (!container) return;
 
     var wrap = document.createElement("div");
     wrap.className = "palette-switch";
@@ -98,11 +96,7 @@
     render();
     wrap.appendChild(label);
     wrap.appendChild(group);
-    if (anchor) {
-      anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
-    } else {
-      container.appendChild(wrap);
-    }
+    container.appendChild(wrap);
   }
 
   if (document.readyState === "loading") {

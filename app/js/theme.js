@@ -6,9 +6,9 @@
  * the system in both directions; the stylesheet handles that via
  * :root[data-theme] taking precedence over the prefers-color-scheme block.
  *
- * The button is built here rather than in the markup so that hosts which own the
- * page theme — the artifact host stamps data-theme itself — get the themed game
- * without a control that would fight them for it.
+ * The control is a row in the menu (game_menu.js) rather than markup, so that
+ * hosts which own the page theme (the artifact host stamps data-theme itself)
+ * get the themed game without a control that would fight them for it.
  */
 
 (function () {
@@ -87,49 +87,36 @@
   function init() {
     apply(stored());
 
-    var row = document.querySelector(".above-game");
-    var restart = document.querySelector(".restart-button");
-    if (!row || !restart) return;
+    // A row in the menu (game_menu.js), named for where it takes you, not the
+    // current state: in the dark it offers day colours, with the sun.
+    if (window.GameMenu) {
+      window.GameMenu.add({
+        label: function () {
+          return effective() === "dark" ? "Day colours" : "Night colours";
+        },
+        icon: function () {
+          return effective() === "dark" ? SUN : MOON;
+        },
+        run: function () {
+          var next = effective() === "dark" ? "light" : "dark";
+          store(next);
+          apply(next);
 
-    var button = document.createElement("button");
-    button.type = "button";
-    button.className = "theme-toggle";
-    button.id = "theme-toggle";
-
-    function render() {
-      var dark = effective() === "dark";
-      // Show the destination, not the current state: the sun is what you get.
-      button.innerHTML = dark ? SUN : MOON;
-      button.setAttribute("aria-label",
-        dark ? "Switch to day colours" : "Switch to night colours");
-      button.setAttribute("title", button.getAttribute("aria-label"));
+          try {
+            if (navigator.vibrate) navigator.vibrate(8);
+          } catch (e) {
+            /* haptics off */
+          }
+        }
+      });
     }
-
-    button.addEventListener("click", function () {
-      var next = effective() === "dark" ? "light" : "dark";
-      store(next);
-      apply(next);
-      render();
-
-      try {
-        if (navigator.vibrate) navigator.vibrate(8);
-      } catch (e) {
-        /* haptics off */
-      }
-    });
-
-    render();
-    row.insertBefore(button, restart);
 
     // Follow the system while no explicit choice is stored, so Android's
     // sunset schedule still moves the page after the first launch.
     if (window.matchMedia) {
       var query = window.matchMedia("(prefers-color-scheme: dark)");
       var onChange = function () {
-        if (!stored()) {
-          apply(null);
-          render();
-        }
+        if (!stored()) apply(null);
       };
       if (query.addEventListener) {
         query.addEventListener("change", onChange);

@@ -106,11 +106,13 @@
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
      worth more than the margin. */
   --gutter: 12px;
-  /* Everything on the page but the board: heading, the game, tile and
-     auto-fill switches, the gaps between them and the container's padding.
-     Measured in the browser at 412px wide, not estimated; if it runs short, a
-     screen short enough for height to size the board cuts off the bottom rows. */
-  --chrome: 281px;
+  /* Everything on the page but the board: heading, the tile and auto-fill
+     switches, the gaps between them and the container's padding. Measured in
+     the browser at 412px wide, not estimated; if it runs short, a screen short
+     enough for height to size the board cuts off the bottom rows. The game
+     switch row (28.7px and a 12px gap) went into the menu on 2026-10-20,
+     taking 41px off this and every page's value. */
+  --chrome: 240px;
   --board-cap: 560px;
 
   --avail-h: calc(100vh - var(--chrome));
@@ -139,7 +141,7 @@
 /* The leaderboard is injected only when a backend is configured, so its height
    is reserved only when it is really there. */
 :root:has(.leaderboard) {
-  --chrome: 388px; /* plus the leaderboard, measured at its taller name-entry state */
+  --chrome: 347px; /* plus the leaderboard, measured at its taller name-entry state */
 }
 
 /* Wide gamut. The ramp is drawn at high chroma the whole way round, and the
@@ -427,8 +429,10 @@ h1.title {
 
 /* ---- controls row ---- */
 
-/* Just the theme toggle and New Game, right-aligned under the scores. */
+/* New Game and the menu button, right-aligned under the scores. The menu
+   panel hangs from this row. */
 .above-game {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -472,7 +476,8 @@ h1.title {
 }
 
 /* Secondary to New Game, so it takes the board's muted brown rather than the
-   button brown. Injected by theme.js — absent in hosts that own the theme. */
+   button brown. The menu button (game_menu.js) wears it; the class name dates
+   from when the theme toggle sat here. */
 .theme-toggle {
   flex: 0 0 auto;
   display: inline-flex;
@@ -502,6 +507,78 @@ h1.title {
   width: 21px;
   height: 21px;
   display: block;
+}
+
+/* ---- the menu ---- */
+
+/* Hangs under the menu button, over the board, in the board's brown with a
+   ring of page ground so it stands off a board of the same colour at night. */
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: 6px;
+  background: var(--board-bg);
+  box-shadow: 0 0 0 3px var(--ground);
+  animation: fade-in 120ms ease;
+}
+
+.menu-panel[hidden] {
+  display: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-light);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.menu-item[aria-current="page"] {
+  background: var(--button);
+}
+
+.menu-item:active {
+  background: var(--button-active);
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid var(--ink-light);
+  outline-offset: -2px;
+}
+
+.menu-icon {
+  display: inline-flex;
+  justify-content: center;
+  width: 20px;
+  font-size: 19px;
+}
+
+.menu-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.menu-rule {
+  margin: 6px 10px;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink-light) 22%, transparent);
 }
 
 /* Cross-fade the surfaces when the theme flips, so the switch reads as the
@@ -1006,11 +1083,9 @@ body,
 
 /* ---- footer ---- */
 
-/* The game, tile and auto-fill switches sit under the board, and under the
-   leaderboard when there is one — a choice of game and preferences, not moves.
-   The game switch is plain links, since choosing a game is going to another
-   page. There is no credit line: the MIT notice ships in LICENSE.txt. */
-.game-switch,
+/* Classic's tile and auto-fill switches sit under the board, and under the
+   leaderboard when there is one: preferences, not moves. Choosing a game is
+   in the menu. There is no credit line: the MIT notice ships in LICENSE.txt. */
 .palette-switch {
   display: flex;
   align-items: center;
@@ -1026,7 +1101,6 @@ body,
   color: var(--ink-muted);
 }
 
-.game-switch .seg,
 .palette-switch .seg {
   display: inline-flex;
   padding: 2px;
@@ -1034,7 +1108,6 @@ body,
   background: var(--cell-empty);
 }
 
-.game-switch .seg a,
 .palette-switch .seg button {
   padding: 4px 12px;
   border: 0;
@@ -1049,13 +1122,11 @@ body,
   transition: background-color 160ms ease, color 160ms ease;
 }
 
-.game-switch .seg a[aria-current="page"],
 .palette-switch .seg button[aria-pressed="true"] {
   background: var(--board-bg);
   color: var(--ink-light);
 }
 
-.game-switch .seg a:focus-visible,
 .palette-switch .seg button:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -1072,7 +1143,6 @@ body,
   .container {
     gap: 8px;
   }
-  .game-switch,
   .palette-switch,
   .leaderboard {
     display: none;

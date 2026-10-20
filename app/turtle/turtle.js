@@ -1,4 +1,5 @@
-/* Turtle — 2048 on a hexagonal board, drawn as a turtle's shell.
+/* 🐢48 (was Turtle) — 2048 on a hexagonal board, drawn as a turtle's
+ * shell.
  *
  *   - 19 cells in a hexagon, three to a side, flat side up. Tiles slide and
  *     merge exactly as in 2048, in six directions: straight up and down, and
@@ -7,6 +8,10 @@
  *     its diagonal by its angle; there is no plain left or right. Keys: W and
  *     S (or the up and down arrows) for up and down, Q E A D for the
  *     diagonals.
+ *   - A six-wedge pad under the board does the same, one wedge per board
+ *     side, and lights the wedge each swipe or key picked. Holding a wedge,
+ *     or holding a swipe once it has gone far enough to move, repeats the
+ *     move until a move changes nothing, as classic's Auto-fill does for down.
  *   - New tiles are 2s (90%) or 4s (10%) in a random empty cell. 2048 wins,
  *     with Keep going after it.
  *   - Each new game draws one of four turtles at random, never the one just
@@ -100,7 +105,11 @@
   var SKINS = ["sage", "reef", "garden", "pocket"];
 
   function TurtleManager(size, InputManager, Actuator, StorageManager) {
+    var self = this;
+    this.lastMoved = false;
     root.GameManager.call(this, SIZE, InputManager, Actuator, StorageManager);
+    // A held direction repeats only while its moves still change the board.
+    this.inputManager.moved = function () { return self.lastMoved; };
   }
 
   if (root.GameManager) {
@@ -183,6 +192,7 @@
   // Upstream's move, walked over the hexagon.
   TurtleManager.prototype.move = function (direction) {
     var self = this;
+    this.lastMoved = false;
     if (this.isGameTerminated()) return;
     var vector = this.getVector(direction);
     if (!vector) return;
@@ -213,6 +223,7 @@
       if (!self.positionsEqual(cell, tile)) moved = true;
     });
 
+    this.lastMoved = moved;
     if (moved) {
       this.moves += 1;
       this.addRandomTile();
@@ -268,8 +279,53 @@
     HexInputManager.prototype.constructor = HexInputManager;
   }
 
-  // The classic listener with the swipe read as an angle. Buttons and the
-  // two-tap New Game are inherited.
+  // The pad handles its own presses, so a gesture that starts on it is not a
+  // swipe.
+  HexInputManager.prototype.isControl = function (target) {
+    return root.KeyboardInputManager.prototype.isControl.call(this, target) ||
+           !!(target && target.closest && target.closest(".turtle-pad"));
+  };
+
+  // Set by TurtleManager: whether the last move changed the board.
+  HexInputManager.prototype.moved = function () { return false; };
+
+  // Move now and, while held, again after classic's pause and at its pace,
+  // until a move changes nothing. "aim" tells the pad which wedge to light.
+  HexInputManager.prototype.hold = function (direction) {
+    var self = this;
+    this.stopRepeat();
+    this.disarmRestart();
+    this.emit("aim", direction);
+    this.emit("move", direction);
+    this.repeatTimer = setTimeout(function tick() {
+      if (!self.moved()) return;
+      self.emit("move", direction);
+      self.repeatTimer = setTimeout(tick, self.repeatEveryMs);
+    }, this.repeatDelayMs);
+  };
+
+  HexInputManager.prototype.release = function () {
+    this.stopRepeat();
+    this.emit("aim", null);
+  };
+
+  // One move with no hold: a key, or a swipe lifted before it went far
+  // enough to commit.
+  HexInputManager.prototype.tap = function (direction) {
+    this.release();
+    this.disarmRestart();
+    this.emit("aim", direction);
+    this.emit("move", direction);
+    this.emit("aim", null);
+  };
+
+  // A swipe commits once it is this far out, a little past the tap
+  // threshold, so its angle has some length to be read from.
+  HexInputManager.prototype.commitDistance = 30;
+
+  // The classic listener with the swipe read as an angle, and every
+  // direction held the way classic holds down. Buttons and the two-tap New
+  // Game are inherited.
   HexInputManager.prototype.listen = function () {
     var self = this;
     var keys = {
@@ -286,7 +342,7 @@
       var mapped = keys[event.which];
       if (mapped !== undefined) {
         event.preventDefault();
-        self.emit("move", mapped);
+        self.tap(mapped);
       }
       if (event.which === 82) self.confirmRestart.call(self, event);
     });
@@ -298,21 +354,49 @@
     var startX = null;
     var startY = null;
     var tracking = false;
+    var holding = false; // a swipe that has committed and may be repeating
 
+    // A press on the pad has already started its own hold; leave it be.
     function begin(x, y, target) {
       tracking = !self.isControl(target);
+      if (!tracking) return;
+      self.release();
       startX = x;
       startY = y;
     }
 
+    // Far enough out, the swipe moves without waiting for the lift, and
+    // holding on repeats it.
+    function drag(x, y) {
+      if (!tracking) return;
+      var dx = x - startX;
+      var dy = y - startY;
+      if (Math.sqrt(dx * dx + dy * dy) > self.commitDistance) {
+        tracking = false; // this gesture is spoken for; the lift adds nothing
+        holding = true;
+        self.hold(directionOf(dx, dy));
+      }
+    }
+
     function finish(x, y) {
+      if (holding) {
+        holding = false;
+        self.release();
+      }
       if (!tracking) return;
       tracking = false;
       var dx = x - startX;
       var dy = y - startY;
       if (Math.max(Math.abs(dx), Math.abs(dy)) > self.swipeThreshold) {
-        self.disarmRestart();
-        self.emit("move", directionOf(dx, dy));
+        self.tap(directionOf(dx, dy));
+      }
+    }
+
+    function cancel() {
+      tracking = false;
+      if (holding) {
+        holding = false;
+        self.release();
       }
     }
 
@@ -320,14 +404,17 @@
       document.addEventListener("pointerdown", function (e) {
         if (e.isPrimary) begin(e.clientX, e.clientY, e.target);
       });
+      document.addEventListener("pointermove", function (e) {
+        if (e.isPrimary) drag(e.clientX, e.clientY);
+      });
       document.addEventListener("pointerup", function (e) {
         if (e.isPrimary) finish(e.clientX, e.clientY);
       });
-      document.addEventListener("pointercancel", function () { tracking = false; });
+      document.addEventListener("pointercancel", cancel);
     } else {
       document.addEventListener("touchstart", function (e) {
         if (e.touches.length > 1) {
-          tracking = false;
+          cancel();
           return;
         }
         begin(e.touches[0].clientX, e.touches[0].clientY, e.target);
@@ -336,13 +423,117 @@
         if (e.touches.length > 0) return;
         finish(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
       });
-      document.addEventListener("touchcancel", function () { tracking = false; });
+      document.addEventListener("touchcancel", cancel);
     }
 
     document.addEventListener("touchmove", function (e) {
       if (tracking) e.preventDefault();
+      if (!window.PointerEvent && e.touches.length === 1) {
+        drag(e.touches[0].clientX, e.touches[0].clientY);
+      }
     }, { passive: false });
   };
+
+  /* ---- the pad ----
+   *
+   * A flat-topped hexagon cut into six wedges from its centre, one per side,
+   * so each wedge points at the board side its move slides toward. Wedge i
+   * runs from corner i to corner i + 1 (corner 0 on the right, clockwise), so
+   * its middle is at 60i + 30 degrees: direction (i + 2) % 6. Pressing a
+   * wedge moves and holding repeats (hold above). Its pointer handling is its
+   * own; the swipe listener skips gestures that start on it (isControl).
+   */
+
+  var PAD_R = 50;
+  var PAD_NAMES = ["Up", "Up right", "Down right", "Down", "Down left", "Up left"];
+
+  function padSvg() {
+    var corners = [];
+    for (var i = 0; i < 6; i++) {
+      var a = Math.PI / 3 * i;
+      corners.push([PAD_R * Math.cos(a), PAD_R * Math.sin(a)]);
+    }
+    var h = PAD_R * Math.sqrt(3) / 2;
+    var out = '<svg viewBox="' + (-PAD_R - 2) + " " + (-h - 2).toFixed(2) + " " +
+              (2 * PAD_R + 4) + " " + (2 * h + 4).toFixed(2) + '" focusable="false">';
+    for (var w = 0; w < 6; w++) {
+      var dir = (w + 2) % 6;
+      var p = corners[w];
+      var q = corners[(w + 1) % 6];
+      var mid = ANGLES[dir];
+      var m = mid * Math.PI / 180;
+      var ax = (PAD_R * 0.56 * Math.cos(m)).toFixed(2);
+      var ay = (PAD_R * 0.56 * Math.sin(m)).toFixed(2);
+      out += '<g class="pad-wedge" data-dir="' + dir + '" role="button" aria-label="' +
+             PAD_NAMES[dir] + '">' +
+             '<polygon points="0,0 ' + p[0].toFixed(2) + "," + p[1].toFixed(2) + " " +
+             q[0].toFixed(2) + "," + q[1].toFixed(2) + '"/>' +
+             '<path class="pad-arrow" d="M-5 -6.5 L5 0 L-5 6.5" transform="translate(' +
+             ax + " " + ay + ") rotate(" + mid + ')"/></g>';
+    }
+    return out + '<circle class="pad-hub" r="9"/></svg>';
+  }
+
+  function buildPad(input) {
+    var board = document.querySelector(".game-container");
+    if (!board) return;
+    var pad = document.createElement("div");
+    pad.className = "turtle-pad";
+    pad.setAttribute("role", "group");
+    pad.setAttribute("aria-label", "Move");
+    pad.innerHTML = padSvg();
+    board.parentNode.insertBefore(pad, board.nextSibling);
+
+    var wedges = pad.querySelectorAll(".pad-wedge");
+    var aimed = null;
+    var lit = 0;
+    var unlight = null;
+
+    function light(dir) {
+      if (dir === aimed) return;
+      aimed = dir;
+      for (var i = 0; i < wedges.length; i++) {
+        wedges[i].classList.toggle("is-aimed",
+          parseInt(wedges[i].getAttribute("data-dir"), 10) === dir);
+      }
+    }
+
+    // A wedge stays lit while its direction is held, and for a moment after a
+    // tap so a quick swipe still shows which way it was read.
+    input.on("aim", function (dir) {
+      clearTimeout(unlight);
+      if (dir === null) {
+        var wait = Math.max(0, 160 - (Date.now() - lit));
+        unlight = setTimeout(function () { light(null); }, wait);
+        return;
+      }
+      lit = Date.now();
+      light(dir);
+    });
+
+    var pointer = null;
+
+    pad.addEventListener("pointerdown", function (e) {
+      var wedge = e.target.closest && e.target.closest(".pad-wedge");
+      if (!wedge || pointer !== null) return;
+      e.preventDefault();
+      pointer = e.pointerId;
+      try { pad.setPointerCapture(pointer); } catch (err) { /* already gone */ }
+      input.hold(parseInt(wedge.getAttribute("data-dir"), 10));
+    });
+
+    function up(e) {
+      if (e.pointerId !== pointer) return;
+      pointer = null;
+      input.release();
+    }
+
+    pad.addEventListener("pointerup", up);
+    pad.addEventListener("pointercancel", up);
+    pad.addEventListener("lostpointercapture", up);
+    // A long press is a hold, not a request for the context menu.
+    pad.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  }
 
   /* ---- the turtles ----
    *
@@ -511,6 +702,7 @@
     root.fxCellCenter = fxCellCenter;
     window.requestAnimationFrame(function () {
       root.Turtle.game = new TurtleManager(SIZE, HexInputManager, TurtleActuator, TurtleStorage);
+      buildPad(root.Turtle.game.inputManager);
     });
   }
 })(typeof window !== "undefined" ? window : globalThis);

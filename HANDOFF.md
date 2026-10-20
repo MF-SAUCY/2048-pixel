@@ -1,6 +1,6 @@
 # Handoff — where this project stands
 
-Written 2026-09-30 at the end of a long session and updated 2026-10-12, so
+Written 2026-09-30 at the end of a long session and updated 2026-10-20, so
 the next one can pick up without the conversation. `README.md` explains *what* each feature does and
 why; this file is the working state: how to ship, how to test, what's open.
 
@@ -123,6 +123,38 @@ is new and lightly tested.
   keys off the inner `.is-shipping` element via `:has()`, since the actuator
   rewrites the wrapper's classes a frame after adding it.
 
+## What changed 2026-10-20 (not yet committed or deployed when written)
+
+- **A menu replaces the Game switch** on every page (`app/js/game_menu.js`,
+  new; in the precache list, not in the bundle). The button sits after New
+  Game, styled as the old theme toggle. It lists the five games, then How to
+  play (Fib, Threes, 🐢48) and the day/night switch: `theme.js` and
+  `how_to_play.js` now add rows to it with `GameMenu.add` instead of putting
+  buttons in the heading. A tap or swipe outside closes it and is swallowed,
+  so it never moves tiles. Joseph picked this (option B) from a mockup; option
+  A kept "?" and the theme button in the heading.
+- **Every page's `--chrome` went down 41 px** (the game row was 28.7 px plus a
+  12 px gap): classic 240 / 347, Fib and Threes 160 / 269, Dispatch 162 / 326
+  and 300 from 684 px tall (the 229 step fell into landscape and went). The
+  bundle had no game row but shared classic's 281, so it was over-reserving;
+  240 is now right for it too. Checked headless at 412 x 640 with each page's
+  leaderboard (name-entry state): nothing cut off.
+- **Turtle is now 🐢48** (the plain U+1F422 character, so the phones draw
+  Android's own turtle). Only on-screen text changed: folder, classes,
+  storage keys, leaderboard columns and code names still say turtle.
+- **🐢48 pad and hold-to-repeat.** Six wedges under the board, one per board
+  side; the wedge a swipe, key or press picked lights up. Holding a wedge
+  repeats; a swipe now moves as soon as it is 30 px out (`commitDistance`)
+  and repeats while held, with classic's 0.35 s / 0.2 s timing, stopping when
+  a move changes nothing (`TurtleManager.lastMoved`). The pad scales with the
+  board (0.42 wide, capped at 190 px), so it is in the board's divisor
+  (1.406) rather than `--chrome` (172 / 281). Joseph chose it always on, no
+  switch. Tested in the pane with synthetic pointer events only.
+- **Not yet asked:** whether committing a swipe at 30 px reads the angle well
+  enough on the phone (the old code read it from the whole swipe at the
+  lift); whether the pad is big enough; whether Classic's Tiles and Auto-fill
+  switches should move into the menu too.
+
 ## Shipping a change
 
 1. Edit under `app/`. Run `node tools/test_dispatch.js` if Dispatch was
@@ -189,9 +221,13 @@ columns and the ALTERs used are in README → "The leaderboard".
   from `gameState`. The classic `GameManager` isn't on `window`.
 - **Measure `--chrome`, don't estimate it.** It's the height of everything but
   the board; set too low, short screens cut off the bottom. Values measured at
-  412 px wide: classic 281 / 388 with leaderboard (since the Auto-fill row
-  went in and the credit line came out); Dispatch 229 / 367, or 203 / 341 once the screen is tall enough for the
-  one-line orders row (see the media queries in `dispatch.css`, 2026-10-12). Recheck after any
+  412 px wide: classic 240 / 347 with leaderboard; Fib and Threes 160 / 269;
+  🐢48 172 / 281 plus its pad, which is in the board's divisor; Dispatch
+  162 / 326, or 300 with the leaderboard once the screen is tall enough for
+  the one-line orders row (see the media queries in `dispatch.css`). All
+  were 41 px higher before the game row moved into the menu (2026-10-20). A
+  fresh measurement of the old 🐢48 page with a leaderboard row showing gave
+  345 against its 310 setting, the same kind of gap classic showed. Recheck after any
   change to the page furniture, at heights 915 → 640. Measure by summing the
   container's visible children, gaps and padding, minus the board: the
   container itself stretches to the viewport, so its own height is useless.

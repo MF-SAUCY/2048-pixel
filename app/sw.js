@@ -19,7 +19,7 @@
  *   the previous display mode. Offline, the cached copy still answers.
  */
 
-var CACHE = "2048-pixel-1f59af9132";
+var CACHE = "2048-pixel-c01f1ae8fb";
 
 var SHELL = [
   "./",
@@ -39,6 +39,7 @@ var SHELL = [
   "./js/tile.js",
   "./js/local_storage_manager.js",
   "./js/game_manager.js",
+  "./js/game_menu.js",
   "./js/theme.js",
   "./js/how_to_play.js",
   "./js/palette.js",
