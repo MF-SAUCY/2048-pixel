@@ -115,7 +115,10 @@ is new and lightly tested.
   box and the Practice tag are gone; on-screen "turns" became "moves".
   Fable and Astra both reviewed the old layout; Joseph picked a mix of their
   two proposals from a mockup. Dispatch `--chrome` went down 69 px.
-  Tested headless at 412 px, both themes and 640 px tall; not on a phone.
+  Tested headless at 412 px, both themes and 640 px tall. Joseph then played
+  it on his phone: "it's good", though he doesn't really notice the previews
+  (he thinks that's how he plays, not where they sit). Not yet asked whether
+  Amanda uses the queued orders; if neither does, they could go.
 - **Dispatch: the shipping tile now draws above the others**: its z-index rule
   keys off the inner `.is-shipping` element via `:has()`, since the actuator
   rewrites the wrapper's classes a frame after adding it.
