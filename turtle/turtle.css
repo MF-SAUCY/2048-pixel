@@ -41,9 +41,9 @@
   --title-green: #bdcf47;
 }
 
-/* Heading and the pad's gap, plus the leaderboard when there is one (at its
-   taller name-entry state). Measured in the browser at 412px wide, less the
-   41px of the game switch that moved into the menu (2026-10-20). The pad
+/* Heading and the pad's gap. Measured in the browser at 412px wide, less the
+   41px of the game switch that moved into the menu (2026-10-20). The
+   leaderboard opens from the menu here, so it takes no room. The pad
    grows with the board, so it is in the divisor rather than here: the board
    is 1.04 times as tall as it is wide and the pad 0.4355 board widths tall
    (0.5 wide, its hexagon 0.871 as tall as wide). Past a 420px board the pad
@@ -57,8 +57,9 @@
   :root {
     --chrome: 172px;
   }
+  /* Restated: classic's rule for the leaderboard outranks a bare :root. */
   :root:has(.leaderboard) {
-    --chrome: 281px;
+    --chrome: 172px;
   }
 }
 
@@ -126,10 +127,12 @@
   stroke: var(--pad-lit-arrow);
 }
 
-/* The leaderboard is inserted after the board whenever its data arrives, which
-   can be before or after the pad; it always goes below the pad. */
-.turtle .leaderboard {
-  order: 1;
+/* The leaderboard opens from the menu, in a card over the board; it takes the
+   card's full width, as it does the page's elsewhere, and stays shown in
+   landscape, where the classic sheet hides the page's leaderboard. */
+.lb-card .leaderboard {
+  display: flex;
+  align-self: stretch;
 }
 
 .pad-arrow {
