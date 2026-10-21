@@ -3,8 +3,9 @@
  * It replaced the Game switch under the board (2026-10-20), giving the board
  * that row back. The menu lists the five games, the current one marked, then
  * whatever the page's other scripts add with GameMenu.add: the theme switch
- * (theme.js) everywhere, and How to play (how_to_play.js) on Fib, Threes and
- * 🐢48.
+ * (theme.js) everywhere, How to play (how_to_play.js) on Fib, Threes and
+ * 🐢48, and on classic the Tiles and Auto-fill settings (palette.js,
+ * autofill.js), which flip in place and show their value.
  *
  * While it is open, a tap or swipe outside closes it and goes no further, so
  * dismissing the menu never moves tiles. Escape closes it too.
@@ -50,12 +51,23 @@
     if (items.length) html += '<hr class="menu-rule">';
     panel.innerHTML = html;
 
-    items.forEach(function (item) {
+    items.forEach(function (item, i) {
       var row = document.createElement("button");
       row.type = "button";
       row.className = "menu-item";
-      row.innerHTML = '<span class="menu-icon">' + item.icon() + "</span>" + item.label();
+      row.setAttribute("data-item", i);
+      row.innerHTML = '<span class="menu-icon">' + item.icon() + "</span>" + item.label() +
+        (item.value ? '<span class="menu-value">' + item.value() + "</span>" : "");
       row.addEventListener("click", function () {
+        // A setting flips in place, so the new value shows; anything else
+        // closes the menu first.
+        if (item.stay) {
+          item.run();
+          render();
+          var again = panel.querySelector('[data-item="' + i + '"]');
+          if (again) again.focus();
+          return;
+        }
         close(false);
         item.run();
       });
@@ -146,7 +158,8 @@
   }
 
   window.GameMenu = {
-    // item: { label: fn -> text, icon: fn -> svg or text, run: fn, first }
+    // item: { label: fn -> text, icon: fn -> svg or text, run: fn, first,
+    //         value: fn -> text shown at the right, stay: flip in place }
     add: function (item) {
       if (item.first) {
         items.unshift(item);

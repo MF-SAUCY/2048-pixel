@@ -7,8 +7,9 @@
  * the moment a down move changes nothing, because a real swipe there would
  * not bring a tile in either. Other gestures are untouched.
  *
- * The switch sits under Tiles, in the same style, and is remembered per
- * device. Off by default.
+ * A row in the menu under Tiles (game_menu.js), flipped in place; in the
+ * single-file bundle, which has no menu, a switch under the Tiles switch.
+ * Remembered per device. Off by default.
  *
  * Wraps GameManager.prototype.move and actuate to learn whether the last move
  * did anything: upstream only actuates after a move that changed the board.
@@ -62,7 +63,34 @@
     moved: function () { return lastMoved; }
   };
 
+  var DROP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M12 3v12M6.5 9.5 12 15l5.5-5.5M5 20.5h14"/></svg>';
+
+  function buzz() {
+    try {
+      if (navigator.vibrate) navigator.vibrate(8);
+    } catch (e) {
+      /* haptics off */
+    }
+  }
+
   function init() {
+    if (window.GameMenu) {
+      window.GameMenu.add({
+        stay: true,
+        label: function () { return "Auto-fill"; },
+        value: function () { return on ? "On" : "Off"; },
+        icon: function () { return DROP; },
+        run: function () {
+          on = !on;
+          store(on);
+          buzz();
+        }
+      });
+      return;
+    }
+
     var anchor = document.querySelector(".palette-switch");
     var container = document.querySelector(".container");
     if (!anchor && !container) return;
@@ -94,11 +122,7 @@
         on = next;
         store(on);
         render();
-        try {
-          if (navigator.vibrate) navigator.vibrate(8);
-        } catch (e) {
-          /* haptics off */
-        }
+        buzz();
       });
       buttons[pair[0]] = button;
       group.appendChild(button);
