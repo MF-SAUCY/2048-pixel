@@ -166,6 +166,11 @@ is new and lightly tested.
   the button's states, and that key, swipe and wedge are all refused for a
   locked direction, were checked in the pane with synthetic events. At
   412 x 640 the board is 243 px (255 before the bigger pad).
+- **🐢48's leaderboard moved into the menu** (Joseph's call, same day): a
+  Leaderboard row opens it in a card over the board, like How to play.
+  `--chrome` 172 with or without a leaderboard; at 412 x 640 the board went
+  from 243 to 317 px. Card open, close (Done, Escape, outside) and input
+  blocking checked in the pane; Fib keeps its leaderboard on the page.
 
 ## Shipping a change
 
@@ -235,7 +240,8 @@ columns and the ALTERs used are in README → "The leaderboard".
   the board; set too low, short screens cut off the bottom. Values measured at
   412 px wide: classic 159 / 266 with leaderboard (the bundle, which keeps
   its switch rows, 240); Fib and Threes 160 / 269;
-  🐢48 172 / 281 plus its pad, which is in the board's divisor; Dispatch
+  🐢48 172 (its leaderboard is in the menu) plus its pad, which is in the
+  board's divisor; Dispatch
   162 / 326, or 300 with the leaderboard once the screen is tall enough for
   the one-line orders row (see the media queries in `dispatch.css`). All
   were 41 px higher before the game row moved into the menu (2026-10-20). A

@@ -392,8 +392,16 @@ clears them all. Locks are saved with the game (`locks` in its state), so a
 new game starts unlocked. To change which directions are locked, clear them
 and pick again.
 
+**Its leaderboard is in the menu.** With the pad under the board there was no
+room for it, so on this page alone the menu has a Leaderboard row that opens
+it in a card over the board, as How to play's card opens (`mountInCard` in
+`leaderboard.js`). Name entry works inside it; while it is open, swipes and
+keys outside the name field stop at the window. Done, Escape or a tap outside
+closes it.
+
 The board is 1.04 times as tall as it is wide and the pad 0.4355 board widths
-tall, so the page divides the height it has left by 1.4755.
+tall, so the page divides the height it has left by 1.4755; with the
+leaderboard off the page, `--chrome` is 172 with or without it.
 
 ## The leaderboard
 

@@ -524,6 +524,80 @@
     });
   }
 
+  var TROPHY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5a3 3 0 0 0 3.5 4M16 6h3.5a3 3 0 0 1-3.5 4' +
+    'M12 13v4M8.5 20h7M10 17h4"/></svg>';
+
+  /* 🐢48 has no room under its board (the pad is there), so its panel
+   * lives in a card over the board, opened from the menu, as How to play's
+   * is. While it is open, swipes and keys stop at the window, except keys
+   * typed into the name field, which that field keeps to itself. */
+  function mountInCard(board) {
+    var card = document.createElement("div");
+    card.className = "howto lb-card";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", "Leaderboard");
+    card.hidden = true;
+    card.innerHTML = '<div class="howto-card"></div>';
+    var inner = card.firstChild;
+    inner.appendChild(panel);
+    var done = document.createElement("button");
+    done.type = "button";
+    done.className = "howto-close";
+    done.textContent = "Done";
+    inner.appendChild(done);
+    board.appendChild(card);
+
+    function swallow(event) {
+      if (event.type === "keydown") {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          hide();
+          return;
+        }
+        if (event.target.closest && event.target.closest(".lb-setup input")) return;
+        event.stopPropagation();
+        return;
+      }
+      var inCard = inner.contains(event.target);
+      if (event.type === "click") {
+        if (inCard) return;
+        event.preventDefault();
+        event.stopPropagation();
+        hide();
+        return;
+      }
+      event.stopPropagation();
+    }
+
+    var EVENTS = ["keydown", "pointerdown", "pointerup", "touchstart", "touchend", "click"];
+
+    function show() {
+      card.hidden = false;
+      EVENTS.forEach(function (type) {
+        window.addEventListener(type, swallow, true);
+      });
+      refresh();
+      done.focus();
+    }
+
+    function hide() {
+      card.hidden = true;
+      EVENTS.forEach(function (type) {
+        window.removeEventListener(type, swallow, true);
+      });
+      window.GameMenu.focus();
+    }
+
+    done.addEventListener("click", hide);
+    window.GameMenu.add({
+      label: function () { return "Leaderboard"; },
+      icon: function () { return TROPHY; },
+      run: show
+    });
+  }
+
   function build() {
     var board = document.querySelector(".game-container");
     if (!board || !board.parentNode) return false;
@@ -544,7 +618,11 @@
       panel.innerHTML =
         '<h2 class="lb-title">Leaderboard</h2><ol class="lb-list"></ol>';
     }
-    board.parentNode.insertBefore(panel, board.nextSibling);
+    if (MODE === "turtle" && window.GameMenu) {
+      mountInCard(board);
+    } else {
+      board.parentNode.insertBefore(panel, board.nextSibling);
+    }
     listEl = panel.querySelector(".lb-list");
     return true;
   }
