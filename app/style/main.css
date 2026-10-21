@@ -106,13 +106,14 @@
   /* 12px gutters rather than 16 — on a 412px screen every pixel of board is
      worth more than the margin. */
   --gutter: 12px;
-  /* Everything on the page but the board: heading, the tile and auto-fill
-     switches, the gaps between them and the container's padding. Measured in
-     the browser at 412px wide, not estimated; if it runs short, a screen short
-     enough for height to size the board cuts off the bottom rows. The game
-     switch row (28.7px and a 12px gap) went into the menu on 2026-10-20,
-     taking 41px off this and every page's value. */
-  --chrome: 240px;
+  /* Everything on the page but the board: the heading, the gaps and the
+     container's padding. Measured in the browser at 412px wide, not
+     estimated; if it runs short, a screen short enough for height to size the
+     board cuts off the bottom rows. On 2026-10-20 the game switch row went
+     into the menu, taking 41px (28.7px and a 12px gap) off this and every
+     page's value, and classic's Tiles and Auto-fill rows followed, another
+     81px; the bundle, which has no menu, keeps them (see below). */
+  --chrome: 159px;
   --board-cap: 560px;
 
   --avail-h: calc(100vh - var(--chrome));
@@ -138,10 +139,20 @@
   }
 }
 
+/* The single-file bundle has no menu, so its Tiles and Auto-fill switches stay
+   at the foot of the page, two rows of 28.7px and a 12px gap each. */
+:root:has(.palette-switch) {
+  --chrome: 240px;
+}
+
 /* The leaderboard is injected only when a backend is configured, so its height
    is reserved only when it is really there. */
 :root:has(.leaderboard) {
-  --chrome: 347px; /* plus the leaderboard, measured at its taller name-entry state */
+  --chrome: 266px; /* plus the leaderboard, measured at its taller name-entry state */
+}
+
+:root:has(.leaderboard):has(.palette-switch) {
+  --chrome: 347px;
 }
 
 /* Wide gamut. The ramp is drawn at high chroma the whole way round, and the
@@ -573,6 +584,14 @@ h1.title {
 .menu-icon svg {
   width: 19px;
   height: 19px;
+}
+
+/* A setting's current value, at the right of its row. */
+.menu-value {
+  margin-left: auto;
+  padding-left: 16px;
+  font-weight: 400;
+  opacity: 0.8;
 }
 
 .menu-rule {
@@ -1134,10 +1153,12 @@ body,
 
 /* Landscape: reclaim the chrome so the board keeps its size. */
 @media (max-height: 560px) {
-  /* Restated for :has(.leaderboard), which outranks a bare :root and would
-     otherwise keep reserving room for a leaderboard this block hides. */
+  /* Restated for the :has() rules, which outrank a bare :root and would
+     otherwise keep reserving room for rows this block hides. */
   :root,
-  :root:has(.leaderboard) {
+  :root:has(.palette-switch),
+  :root:has(.leaderboard),
+  :root:has(.leaderboard):has(.palette-switch) {
     --chrome: 150px;
   }
   .container {

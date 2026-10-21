@@ -36,7 +36,7 @@ the margin still moves tiles.
 
 **No instructions on screen.** Upstream's "Join the numbers…" tagline and its
 how-to-play paragraph are gone, and so is the credit line (the MIT notice ships
-in `app/LICENSE.txt`); the footer is just the Tiles and Auto-fill switches.
+in `app/LICENSE.txt`), and the page has no footer: its settings are in the menu.
 The scores and the controls row (New Game, menu) stack on the right, and
 the logo takes the left at the height of both, sized with a container query to
 fill whatever width they leave: about 82px on the Pixel, against upstream's
@@ -119,7 +119,7 @@ single switch point that works anyway, so every tile takes the same near-black
 `#241f1a`; the worst case on the ramp is **5.43:1**, clearing even the stricter
 4.5:1 normal-text bar.
 
-**A palette switch.** The footer carries a Custom / Original toggle, so the
+**A palette switch.** The menu's Tiles row flips between Custom and Original, so the
 upstream ramp is one tap away for comparison. Original is faithful — the same
 hex values, the same dark-then-white ink split, and no display-p3 extension,
 since "Original" should mean what upstream ships rather than an improved version
@@ -165,11 +165,14 @@ fighting them for it.
 
 **The menu.** A button beside New Game on every page (`js/game_menu.js`,
 2026-10-20) opens a list of the five games, the current one marked, then the
-page's extras: How to play on Fib, Threes and 🐢48, and the day/night switch
-everywhere. It replaced the Game switch row under the board, which gave the
-board back 41px of height. While it is open, a tap or swipe outside only
-closes it, and Escape closes it too. The bundle has no menu: it is classic
-alone.
+page's extras: How to play on Fib, Threes and 🐢48, the day/night switch
+everywhere, and classic's Tiles and Auto-fill, which flip in place and show
+their value at the right. It replaced the Game switch row under the board
+(41px of height back to every board), and classic's two switch rows after it
+(another 81px). While it is open, a tap or swipe outside only
+closes it, and Escape closes it too. The bundle has no menu, since it is
+classic alone, so its Tiles and Auto-fill stay switches at the foot of the
+page, and `:root:has(.palette-switch)` keeps room for them.
 
 **Offline and installable.** A service worker precaches the whole shell — a dozen
 small files — and serves it cache-first, so the game works in airplane mode once

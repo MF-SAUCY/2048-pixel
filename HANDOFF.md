@@ -152,8 +152,13 @@ is new and lightly tested.
   switch. Tested in the pane with synthetic pointer events only.
 - **Not yet asked:** whether committing a swipe at 30 px reads the angle well
   enough on the phone (the old code read it from the whole swipe at the
-  lift); whether the pad is big enough; whether Classic's Tiles and Auto-fill
-  switches should move into the menu too.
+  lift); whether the pad is big enough.
+- **Classic's Tiles and Auto-fill moved into the menu too** (Joseph's call,
+  same day, after the deploy above): rows that flip in place and show their
+  value. Classic `--chrome` is now 159 / 266; the bundle keeps its switches
+  and 240 through `:root:has(.palette-switch)`. Checked at 412 x 640 with the
+  leaderboard: fits exactly. A held down swipe with Auto-fill turned on from
+  the menu repeated 7 times in 1.4 s.
 
 ## Shipping a change
 
@@ -221,7 +226,8 @@ columns and the ALTERs used are in README → "The leaderboard".
   from `gameState`. The classic `GameManager` isn't on `window`.
 - **Measure `--chrome`, don't estimate it.** It's the height of everything but
   the board; set too low, short screens cut off the bottom. Values measured at
-  412 px wide: classic 240 / 347 with leaderboard; Fib and Threes 160 / 269;
+  412 px wide: classic 159 / 266 with leaderboard (the bundle, which keeps
+  its switch rows, 240); Fib and Threes 160 / 269;
   🐢48 172 / 281 plus its pad, which is in the board's divisor; Dispatch
   162 / 326, or 300 with the leaderboard once the screen is tall enough for
   the one-line orders row (see the media queries in `dispatch.css`). All

@@ -1,9 +1,8 @@
 /* Tile palette switch — the custom gradient, or upstream's original.
  *
  * Stamps data-palette="original" on the root element; the stylesheet does the
- * rest. Lives in the footer rather than beside New Game: it is a preference you
- * set once, not a control you reach for mid-game, and the action row has no
- * space left at 412px.
+ * rest. A row in the menu (game_menu.js) that flips in place; in the
+ * single-file bundle, which has no menu, a switch at the foot of the page.
  *
  * Unlike theme.js this ships everywhere, including the single-file bundle. A
  * host may own the page's light/dark theme, but nothing outside the game has an
@@ -43,11 +42,41 @@
     }
   }
 
+  var GRID = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+    '<rect x="3" y="3" width="8" height="8" rx="1.5"/>' +
+    '<rect x="13" y="3" width="8" height="8" rx="1.5"/>' +
+    '<rect x="3" y="13" width="8" height="8" rx="1.5"/>' +
+    '<rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>';
+
+  function buzz() {
+    try {
+      if (navigator.vibrate) navigator.vibrate(8);
+    } catch (e) {
+      /* haptics off */
+    }
+  }
+
   function init() {
     var current = stored();
     apply(current);
 
-    // At the foot of the page, under the board and any leaderboard.
+    if (window.GameMenu) {
+      window.GameMenu.add({
+        stay: true,
+        label: function () { return "Tiles"; },
+        value: function () { return current === "custom" ? "Custom" : "Original"; },
+        icon: function () { return GRID; },
+        run: function () {
+          current = current === "custom" ? "original" : "custom";
+          store(current);
+          apply(current);
+          buzz();
+        }
+      });
+      return;
+    }
+
+    // No menu (the bundle): at the foot of the page, under the board.
     var container = document.querySelector(".container");
     if (!container) return;
 
@@ -77,11 +106,7 @@
         store(name);
         apply(name);
         render();
-        try {
-          if (navigator.vibrate) navigator.vibrate(8);
-        } catch (e) {
-          /* haptics off */
-        }
+        buzz();
       });
       buttons[name] = button;
       group.appendChild(button);
