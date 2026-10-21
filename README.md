@@ -364,6 +364,10 @@ just played:
 - **Pocket Pal** — a hatchling (`#b5bd91` / `#87916b`) with its face on the
   right; it blinks now and then.
 
+The title's 48 takes the emoji's greens as Android draws them: the body
+(`#bdcf47`) at night, the darker shell (`#6e823a`) by day, where the body
+green would be faint on cream.
+
 Sage was Claude's design, the other three Astra's. The movements are off under
 `prefers-reduced-motion`.
 
