@@ -34,6 +34,9 @@
       "Swipe <b>up, down or along a diagonal</b>: six directions, and no " +
         "plain left or right. A sideways swipe goes up or down its diagonal " +
         "by its angle.",
+      "The pad moves too; <b>hold</b> a wedge or a swipe to repeat it. " +
+        "<b>Lock</b>: tap it, tap the directions to block, tap it again. " +
+        "Tap it twice to clear the locks.",
       "Matching tiles merge, as in 2048. Reach <b>2048</b> to win.",
       "Each new game brings a different turtle."
     ]

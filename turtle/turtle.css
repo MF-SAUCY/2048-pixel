@@ -45,11 +45,11 @@
    taller name-entry state). Measured in the browser at 412px wide, less the
    41px of the game switch that moved into the menu (2026-10-20). The pad
    grows with the board, so it is in the divisor rather than here: the board
-   is 1.04 times as tall as it is wide and the pad 0.366 board widths tall
-   (0.42 wide, its hexagon 0.871 as tall as wide). Past a 452px board the pad
+   is 1.04 times as tall as it is wide and the pad 0.4355 board widths tall
+   (0.5 wide, its hexagon 0.871 as tall as wide). Past a 420px board the pad
    stops growing, which only errs toward a smaller board. */
 :root {
-  --board: min(calc(100vw - 2 * var(--gutter)), calc(var(--avail-h) / 1.406), var(--board-cap));
+  --board: min(calc(100vw - 2 * var(--gutter)), calc(var(--avail-h) / 1.4755), var(--board-cap));
   --cell: calc(var(--board) * 0.17);
 }
 
@@ -69,12 +69,20 @@
 }
 
 /* ---- the pad ----
-   Six wedges under the board, in New Game's brown; the one being moved
-   toward lights up and sinks a little. */
+   Six wedges under the board at the right, in New Game's brown, with the lock
+   button to their left; the wedge being moved toward lights up and sinks a
+   little. */
+
+.turtle-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+}
 
 .turtle-pad {
-  width: min(calc(var(--board) * 0.42), 190px);
-  margin: 0 auto;
+  flex: 0 0 auto;
+  width: min(calc(var(--board) * 0.5), 210px);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -135,6 +143,53 @@
 
 .pad-hub {
   fill: var(--ground);
+}
+
+/* Locks. Picking: chosen wedges take the lit colours. Playing: locked wedges
+   fade and show a lock where the arrow was. */
+.pad-lock {
+  display: none;
+  fill: var(--ink-light);
+  stroke: var(--ink-light);
+}
+
+.turtle-pad.is-locking .is-locked polygon {
+  fill: var(--pad-lit);
+}
+
+.turtle-pad.is-locking .is-locked .pad-arrow {
+  stroke: var(--pad-lit-arrow);
+}
+
+.turtle-pad:not(.is-locking) .is-locked polygon {
+  opacity: 0.35;
+}
+
+.turtle-pad:not(.is-locking) .is-locked .pad-arrow {
+  display: none;
+}
+
+.turtle-pad:not(.is-locking) .is-locked .pad-lock {
+  display: inline;
+}
+
+/* The lock button wears the menu button's look; lit while picking, and
+   outlined while it asks to clear, as New Game does. */
+.lock-button {
+  flex: 0 0 auto;
+}
+
+/* By day the pad's lit tan is this button's own colour, so the button lights
+   in the ink instead; at night the ink is the pale lit colour anyway. */
+.lock-button.is-locking {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.lock-button.is-armed {
+  background: var(--ground);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--ink);
 }
 
 .turtle .game-container {
