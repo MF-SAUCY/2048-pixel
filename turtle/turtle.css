@@ -13,6 +13,10 @@
   /* The pad's lit wedge, pale against the brown wedges in both themes. */
   --pad-lit: var(--board-bg);
   --pad-lit-arrow: var(--ink);
+  /* The title's 48, in the turtle emoji's greens as Android draws it (sampled
+     from Joseph's screenshot; approved 2026-10-20): the shell by day, where
+     the body green would be faint on cream, the body at night. */
+  --title-green: #6e823a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +27,7 @@
     --reef-eye: var(--d-ink);
     --pad-lit: var(--d-ink);
     --pad-lit-arrow: var(--d-ground);
+    --title-green: #bdcf47;
   }
 }
 
@@ -33,6 +38,7 @@
   --reef-eye: var(--d-ink);
   --pad-lit: var(--d-ink);
   --pad-lit-arrow: var(--d-ground);
+  --title-green: #bdcf47;
 }
 
 /* Heading and the pad's gap, plus the leaderboard when there is one (at its
@@ -56,8 +62,10 @@
   }
 }
 
+/* The emoji keeps its own colours; only the 48 takes the green. */
 .turtle h1.title {
   font-size: clamp(22px, calc(100cqi / 2.4), 90px);
+  color: var(--title-green);
 }
 
 /* ---- the pad ----
