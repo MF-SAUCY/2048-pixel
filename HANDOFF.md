@@ -159,6 +159,13 @@ is new and lightly tested.
   and 240 through `:root:has(.palette-switch)`. Checked at 412 x 640 with the
   leaderboard: fits exactly. A held down swipe with Auto-fill turned on from
   the menu repeated 7 times in 1.4 s.
+- **🐢48 pad bigger, at the right, with a lock** (later the same day; Joseph
+  picked the lock beside the pad over one in its centre, and a bigger pad over
+  a lock at the exact screen centre). Pad 0.5 board wide (194 px at 412),
+  divisor 1.4755. Lock rules are tested in `test_variants.js` (25 tests);
+  the button's states, and that key, swipe and wedge are all refused for a
+  locked direction, were checked in the pane with synthetic events. At
+  412 x 640 the board is 243 px (255 before the bigger pad).
 
 ## Shipping a change
 

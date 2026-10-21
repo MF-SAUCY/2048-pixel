@@ -372,8 +372,9 @@ Sage was Claude's design, the other three Astra's. The movements are off under
 `prefers-reduced-motion`.
 
 **The pad** (2026-10-20). Six swipe directions made it hard to be sure where a
-swipe would go, so a hexagonal pad sits under the board: six wedges, each
-pointing at the board side it moves toward, in New Game's brown. The wedge a
+swipe would go, so a hexagonal pad sits under the board at the right (half
+the board's width, up to 210px): six wedges, each pointing at the board side
+it moves toward, in New Game's brown. The wedge a
 swipe or key picked lights up (it turns pale and sinks a little), so a
 swipe shows how it was read. Holding a wedge repeats the move, and so does
 holding a swipe: once a swipe is 30px out it moves without waiting for the
@@ -381,8 +382,18 @@ lift, and from there it works like classic's Auto-fill does for down, in any
 of the six directions: a pause of 0.35 s, then a move every 0.2 s, stopping as
 soon as a move changes nothing. Always on, with no switch.
 
-The board is 1.04 times as tall as it is wide and the pad 0.366 board widths
-tall, so the page divides the height it has left by 1.406.
+**The lock** sits left of the pad, styled as the menu button. Tap it and it
+lights (ink by day, pale at night); wedges tapped now are picked to lock (tap
+again to unpick) instead of moving. Tap the lock again to play on: locked
+wedges fade and show a lock, and their direction will not move by wedge,
+swipe or key (`TurtleManager.move` refuses it). With locks set, tapping the
+lock asks first, outlined the way New Game asks, and a second tap within 3 s
+clears them all. Locks are saved with the game (`locks` in its state), so a
+new game starts unlocked. To change which directions are locked, clear them
+and pick again.
+
+The board is 1.04 times as tall as it is wide and the pad 0.4355 board widths
+tall, so the page divides the height it has left by 1.4755.
 
 ## The leaderboard
 

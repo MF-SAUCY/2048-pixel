@@ -12,6 +12,8 @@
  *     side, and lights the wedge each swipe or key picked. Holding a wedge,
  *     or holding a swipe once it has gone far enough to move, repeats the
  *     move until a move changes nothing, as classic's Auto-fill does for down.
+ *   - A lock beside the pad locks chosen directions against every input
+ *     until it clears them; locks are saved with the game.
  *   - New tiles are 2s (90%) or 4s (10%) in a random empty cell. 2048 wins,
  *     with Keep going after it.
  *   - Each new game draws one of four turtles at random, never the one just
@@ -138,6 +140,7 @@
       this.keepPlaying = previousState.keepPlaying;
       this.moves = previousState.moves || 0;
       this.skin = previousState.skin || this.pickSkin(lastSkin);
+      this.locks = previousState.locks || [];
     } else {
       this.grid = new HexGrid(SIZE);
       this.score = 0;
@@ -146,6 +149,7 @@
       this.keepPlaying = false;
       this.moves = 0;
       this.skin = this.pickSkin(lastSkin);
+      this.locks = [];
       this.addStartTiles();
     }
     if (this.storageManager.setLastSkin) this.storageManager.setLastSkin(this.skin);
@@ -161,13 +165,43 @@
       won: this.won,
       keepPlaying: this.keepPlaying,
       moves: this.moves,
-      skin: this.skin
+      skin: this.skin,
+      locks: this.locks
     };
+  };
+
+  /* Locked directions: the pad's lock picks them, and until they are cleared
+   * no wedge, swipe or key can move that way. They are saved with the game,
+   * so a new game starts unlocked. onLocks lets the pad redraw. */
+  TurtleManager.prototype.isLocked = function (direction) {
+    return this.locks.indexOf(direction) !== -1;
+  };
+
+  TurtleManager.prototype.toggleLock = function (direction) {
+    if (this.isLocked(direction)) {
+      this.locks = this.locks.filter(function (d) { return d !== direction; });
+    } else {
+      this.locks = this.locks.concat([direction]).sort();
+    }
+    this.saveLocks();
+  };
+
+  TurtleManager.prototype.clearLocks = function () {
+    this.locks = [];
+    this.saveLocks();
+  };
+
+  // Saved without a full actuate, which would redraw the tiles and replay the
+  // last move's merges.
+  TurtleManager.prototype.saveLocks = function () {
+    if (!this.over) this.storageManager.setGameState(this.serialize());
+    if (this.onLocks) this.onLocks(this.locks);
   };
 
   TurtleManager.prototype.actuate = function () {
     root.GameManager.prototype.actuate.call(this);
     if (this.actuator.setSkin) this.actuator.setSkin(this.skin, this.over);
+    if (this.onLocks) this.onLocks(this.locks);
   };
 
   TurtleManager.prototype.getVector = function (direction) {
@@ -193,7 +227,7 @@
   TurtleManager.prototype.move = function (direction) {
     var self = this;
     this.lastMoved = false;
-    if (this.isGameTerminated()) return;
+    if (this.isGameTerminated() || this.isLocked(direction)) return;
     var vector = this.getVector(direction);
     if (!vector) return;
     var moved = false;
@@ -442,10 +476,30 @@
    * its middle is at 60i + 30 degrees: direction (i + 2) % 6. Pressing a
    * wedge moves and holding repeats (hold above). Its pointer handling is its
    * own; the swipe listener skips gestures that start on it (isControl).
+   *
+   * The lock button beside it locks directions. Tap it and it lights: wedges
+   * pressed now are picked as locked (press again to unpick), not played. Tap
+   * it again to play on; locked wedges dim and show a lock, and their
+   * direction will not move by wedge, swipe or key. With locks set, a tap asks
+   * "again?" (outlined, as New Game does) and a second within three seconds
+   * clears them all.
    */
 
   var PAD_R = 50;
   var PAD_NAMES = ["Up", "Up right", "Down right", "Down", "Down left", "Up left"];
+
+  // Shackle and body, centred on the origin, about 14 units across.
+  var LOCK_GLYPH = '<path d="M-4.5 -1V-4a4.5 4.5 0 0 1 9 0v3" fill="none" ' +
+    'stroke-width="2.2" stroke-linecap="round"/>' +
+    '<rect x="-6.5" y="-1" width="13" height="9.5" rx="2" stroke="none"/>';
+  var LOCK_OPEN_GLYPH = '<path d="M-4.5 -1V-4a4.5 4.5 0 0 1 8.6 -1.8" fill="none" ' +
+    'stroke-width="2.2" stroke-linecap="round"/>' +
+    '<rect x="-6.5" y="-1" width="13" height="9.5" rx="2" stroke="none"/>';
+
+  function lockSvg(open) {
+    return '<svg viewBox="-10 -10 20 20" fill="currentColor" stroke="currentColor" ' +
+           'aria-hidden="true">' + (open ? LOCK_OPEN_GLYPH : LOCK_GLYPH) + "</svg>";
+  }
 
   function padSvg() {
     var corners = [];
@@ -469,20 +523,42 @@
              '<polygon points="0,0 ' + p[0].toFixed(2) + "," + p[1].toFixed(2) + " " +
              q[0].toFixed(2) + "," + q[1].toFixed(2) + '"/>' +
              '<path class="pad-arrow" d="M-5 -6.5 L5 0 L-5 6.5" transform="translate(' +
-             ax + " " + ay + ") rotate(" + mid + ')"/></g>';
+             ax + " " + ay + ") rotate(" + mid + ')"/>' +
+             '<g class="pad-lock" transform="translate(' + ax + " " + ay + ') scale(0.8)">' +
+             LOCK_GLYPH + "</g></g>";
     }
     return out + '<circle class="pad-hub" r="9"/></svg>';
   }
 
-  function buildPad(input) {
+  function buzz() {
+    try {
+      if (navigator.vibrate) navigator.vibrate(8);
+    } catch (e) {
+      /* haptics off */
+    }
+  }
+
+  function buildPad(game) {
+    var input = game.inputManager;
     var board = document.querySelector(".game-container");
     if (!board) return;
+
+    var row = document.createElement("div");
+    row.className = "turtle-controls";
+
+    var lock = document.createElement("button");
+    lock.type = "button";
+    lock.className = "theme-toggle lock-button";
+
     var pad = document.createElement("div");
     pad.className = "turtle-pad";
     pad.setAttribute("role", "group");
     pad.setAttribute("aria-label", "Move");
     pad.innerHTML = padSvg();
-    board.parentNode.insertBefore(pad, board.nextSibling);
+
+    row.appendChild(lock);
+    row.appendChild(pad);
+    board.parentNode.insertBefore(row, board.nextSibling);
 
     var wedges = pad.querySelectorAll(".pad-wedge");
     var aimed = null;
@@ -511,15 +587,84 @@
       light(dir);
     });
 
+    /* The lock: "play", "locking" (picking), or "armed" (asking to clear). */
+    var mode = "play";
+    var armTimer = null;
+
+    var LABELS = {
+      play: "Lock directions",
+      locked: "Clear locked directions",
+      locking: "Done locking",
+      armed: "Tap again to clear locks"
+    };
+
+    function render() {
+      var locks = game.locks || [];
+      var state = mode === "play" && locks.length ? "locked" : mode;
+      lock.innerHTML = lockSvg(state === "play");
+      lock.classList.toggle("is-locking", mode === "locking");
+      lock.classList.toggle("is-armed", mode === "armed");
+      lock.setAttribute("aria-label", LABELS[state]);
+      lock.setAttribute("title", LABELS[state]);
+      lock.setAttribute("aria-pressed", String(mode === "locking"));
+      pad.classList.toggle("is-locking", mode === "locking");
+      for (var i = 0; i < wedges.length; i++) {
+        var dir = parseInt(wedges[i].getAttribute("data-dir"), 10);
+        var locked = locks.indexOf(dir) !== -1;
+        wedges[i].classList.toggle("is-locked", locked);
+        wedges[i].setAttribute("aria-label", PAD_NAMES[dir] + (locked ? " (locked)" : ""));
+      }
+    }
+
+    function setMode(next) {
+      clearTimeout(armTimer);
+      mode = next;
+      if (mode === "armed") {
+        armTimer = setTimeout(function () { setMode("play"); }, input.restartArmMs);
+      }
+      render();
+    }
+
+    lock.addEventListener("click", function () {
+      if (mode === "locking") {
+        setMode("play");
+      } else if (mode === "armed") {
+        game.clearLocks();
+        setMode("play");
+      } else if (game.locks.length) {
+        setMode("armed");
+      } else {
+        setMode("locking");
+      }
+      buzz();
+    });
+
+    // Playing on, or a new game, settles the lock back to play.
+    input.on("move", function () {
+      if (mode === "armed") setMode("play");
+    });
+    input.on("restart", function () {
+      if (mode !== "play") setMode("play");
+    });
+    game.onLocks = render;
+    render();
+
     var pointer = null;
 
     pad.addEventListener("pointerdown", function (e) {
       var wedge = e.target.closest && e.target.closest(".pad-wedge");
       if (!wedge || pointer !== null) return;
       e.preventDefault();
+      var dir = parseInt(wedge.getAttribute("data-dir"), 10);
+      if (mode === "locking") {
+        game.toggleLock(dir);
+        buzz();
+        return;
+      }
+      if (mode === "armed") setMode("play");
       pointer = e.pointerId;
       try { pad.setPointerCapture(pointer); } catch (err) { /* already gone */ }
-      input.hold(parseInt(wedge.getAttribute("data-dir"), 10));
+      input.hold(dir);
     });
 
     function up(e) {
@@ -702,7 +847,7 @@
     root.fxCellCenter = fxCellCenter;
     window.requestAnimationFrame(function () {
       root.Turtle.game = new TurtleManager(SIZE, HexInputManager, TurtleActuator, TurtleStorage);
-      buildPad(root.Turtle.game.inputManager);
+      buildPad(root.Turtle.game);
     });
   }
 })(typeof window !== "undefined" ? window : globalThis);

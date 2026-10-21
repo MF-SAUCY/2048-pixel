@@ -347,4 +347,34 @@ test("turtle: a new game always brings a different turtle", () => {
   assert.strictEqual(seen.size, 4);
 });
 
+test("turtle: a locked direction does not move; the others still do", () => {
+  const g = turtle();
+  clear(g);
+  put(g, 2, 4, 2);
+  g.toggleLock(0);
+  assert.ok(g.isLocked(0));
+  g.move(0);
+  assert.strictEqual(at(g, 2, 4), 2, "up is locked: the tile stays");
+  assert.strictEqual(g.lastMoved, false, "so a held up stops at once");
+  assert.strictEqual(g.moves, 0);
+  g.move(5);
+  assert.strictEqual(at(g, 2, 4), 0, "up-left is not locked: the tile moves");
+  g.toggleLock(0);
+  assert.ok(!g.isLocked(0), "a second pick unlocks it");
+});
+
+test("turtle: locks are saved with the game and cleared by a new game", () => {
+  const Storage = makeStorage();
+  const g = new Turtle.TurtleManager(5, Input, Actuator, Storage);
+  g.toggleLock(3);
+  g.toggleLock(1);
+  const again = new Turtle.TurtleManager(5, Input, Actuator, Storage);
+  assert.deepStrictEqual(plain(again.locks), [1, 3], "reloaded with the game");
+  again.restart();
+  assert.deepStrictEqual(plain(again.locks), [], "a new game starts unlocked");
+  again.toggleLock(2);
+  again.clearLocks();
+  assert.deepStrictEqual(plain(again.locks), []);
+});
+
 console.log("\n" + passed + " tests passed");
