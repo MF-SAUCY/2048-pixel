@@ -123,7 +123,7 @@ is new and lightly tested.
   keys off the inner `.is-shipping` element via `:has()`, since the actuator
   rewrites the wrapper's classes a frame after adding it.
 
-## What changed 2026-10-20 (not yet committed or deployed when written)
+## What changed 2026-10-20 (live as `701ff1c`; claude.ai copy republished, version 15)
 
 - **A menu replaces the Game switch** on every page (`app/js/game_menu.js`,
   new; in the precache list, not in the bundle). The button sits after New
