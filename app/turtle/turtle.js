@@ -260,10 +260,19 @@
     this.lastMoved = moved;
     if (moved) {
       this.moves += 1;
+      this.afterSlide();
       this.addRandomTile();
-      if (!this.movesAvailable()) this.over = true;
+      this.checkOver();
       this.actuate();
     }
+  };
+
+  // Hooks for the egg mode (nest.js): after the tiles slide, before the new
+  // tile; and the end-of-move check for game over.
+  TurtleManager.prototype.afterSlide = function () {};
+
+  TurtleManager.prototype.checkOver = function () {
+    if (!this.movesAvailable()) this.over = true;
   };
 
   TurtleManager.prototype.tileMatchesAvailable = function () {
@@ -313,11 +322,12 @@
     HexInputManager.prototype.constructor = HexInputManager;
   }
 
-  // The pad handles its own presses, so a gesture that starts on it is not a
-  // swipe.
+  // The pad, and the egg mode's bar and choice card, handle their own
+  // presses, so a gesture that starts on them is not a swipe.
   HexInputManager.prototype.isControl = function (target) {
     return root.KeyboardInputManager.prototype.isControl.call(this, target) ||
-           !!(target && target.closest && target.closest(".turtle-pad"));
+           !!(target && target.closest &&
+              target.closest(".turtle-pad, .nest-bar, .nest-choice"));
   };
 
   // Set by TurtleManager: whether the last move changed the board.
@@ -835,19 +845,39 @@
   root.Turtle = {
     TurtleManager: TurtleManager,
     HexGrid: HexGrid,
+    HexInputManager: HexInputManager,
+    TurtleActuator: TurtleActuator,
+    TurtleStorage: TurtleStorage,
+    buildPad: buildPad,
     directionOf: directionOf,
     inHex: inHex,
     cellCentre: cellCentre,
+    SIZE: SIZE,
     VECTORS: VECTORS,
     SKINS: SKINS,
     VIEW: VIEW
   };
 
+  // An egg, for the menu's switch between plain 🐢48 and the egg mode.
+  var EGG_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+    '<path d="M12 2.5c-3.7 0-6.8 5.6-6.8 10.4a6.8 6.8 0 0 0 13.6 0C18.8 8.1 15.7 2.5 12 2.5z"/></svg>';
+
   if (typeof document !== "undefined" && document.querySelector(".turtle")) {
     root.fxCellCenter = fxCellCenter;
-    window.requestAnimationFrame(function () {
-      root.Turtle.game = new TurtleManager(SIZE, HexInputManager, TurtleActuator, TurtleStorage);
-      buildPad(root.Turtle.game);
-    });
+    var eggs = !!document.querySelector(".nest");
+    if (root.GameMenu) {
+      root.GameMenu.add({
+        label: function () { return eggs ? "Plain 🐢48" : "Egg mode"; },
+        icon: function () { return EGG_ICON; },
+        run: function () { window.location.href = eggs ? "./" : "nest.html"; }
+      });
+    }
+    // The egg mode starts its own game (nest.js).
+    if (!eggs) {
+      window.requestAnimationFrame(function () {
+        root.Turtle.game = new TurtleManager(SIZE, HexInputManager, TurtleActuator, TurtleStorage);
+        buildPad(root.Turtle.game);
+      });
+    }
   }
 })(typeof window !== "undefined" ? window : globalThis);

@@ -403,6 +403,36 @@ The board is 1.04 times as tall as it is wide and the pad 0.4355 board widths
 tall, so the page divides the height it has left by 1.4755; with the
 leaderboard off the page, `--chrome` is 172 with or without it.
 
+### 🐢48 egg mode
+
+A sub-mode of 🐢48 (`app/turtle/nest.html`, `nest.js`, `nest.css`; "Egg
+mode" in 🐢48's menu, "Plain 🐢48" to go back), built 2026-10-31 so a long
+game need not end because the board fills with big tiles that will never
+pair. It keeps plain 🐢48's casual pace and adds no pressure:
+
+- The tail cell (bottom middle) is the **nest**. A 2048 sitting on it can be
+  laid: tap it, and a card asks what the egg becomes, an **undo** or a new
+  **slot** on the turtle's back (six at most; past that, an undo).
+- **Carry**: tap an empty slot, then a tile of 2048 or more. A carried tile
+  still grows: when a move leaves a matching tile on the board, it jumps up
+  and merges into the carried one (scored as a merge), and carried tiles
+  that become equal merge too, freeing a slot.
+- **Undo** takes back the last move; the replay draws a fresh tile. Laying
+  and carrying can't be undone.
+- With no move left the game waits while an undo, a lay or a carry could
+  help, and says which. There is no 2048 win.
+
+Every egg costs the same (one 2048), which is what keeps the clog from
+coming back. `tools/sim_nest.js` simulated it with a one-move-ahead bot:
+with six slots all 8 games passed 200,000 moves (~7M, 262144 top tile);
+with three, games ended around 122k moves; plain 🐢48 with the same bot
+ends around 13k. An earlier design whose eggs doubled in cost only delayed
+the clog. `TurtleManager` has two hooks for it, `afterSlide` and
+`checkOver`. Its own saved game and best (`nest-state`, `nest-best`) and
+leaderboard columns (`nest_best`, `nest_top`, in `tools/nest_columns.sql`);
+the top tile counts carried tiles. Rule tests are in
+`tools/test_variants.js`.
+
 ## The leaderboard
 
 Two players, one shared table. It is deliberately the smallest thing that works:
@@ -496,6 +526,11 @@ alter table public.scores
   add column if not exists threes_top  integer not null default 0,
   add column if not exists turtle_best integer not null default 0,
   add column if not exists turtle_top  integer not null default 0;
+
+-- 🐢48 egg mode (2026-10-31)
+alter table public.scores
+  add column if not exists nest_best integer not null default 0,
+  add column if not exists nest_top  integer not null default 0;
 ```
 
 Each page selects only its own columns, so a column missing for one mode

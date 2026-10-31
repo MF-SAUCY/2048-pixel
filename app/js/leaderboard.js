@@ -40,11 +40,14 @@
   var VARIANTS = {
     fib: { best: "fib-best", top: "fib-top" },
     threes: { best: "threes-best", top: "threes-top" },
-    turtle: { best: "turtle-best", top: "turtle-top" }
+    turtle: { best: "turtle-best", top: "turtle-top" },
+    nest: { best: "nest-best", top: "nest-top" }
   };
+  // The egg mode's page is a 🐢48 page too, so it is checked first.
   var MODE = document.querySelector(".dispatch") ? "dispatch"
            : document.querySelector(".fib") ? "fib"
            : document.querySelector(".threes") ? "threes"
+           : document.querySelector(".nest") ? "nest"
            : document.querySelector(".turtle") ? "turtle"
            : "classic";
   var VARIANT = VARIANTS[MODE] || null;
@@ -53,7 +56,8 @@
     dispatch: "2048-pending-dispatch",
     fib: "2048-pending-fib",
     threes: "2048-pending-threes",
-    turtle: "2048-pending-turtle"
+    turtle: "2048-pending-turtle",
+    nest: "2048-pending-nest"
   };
   var COLUMNS = {
     classic: "best,games,best_tile,wins_2048,wins_4096",
@@ -618,7 +622,7 @@
       panel.innerHTML =
         '<h2 class="lb-title">Leaderboard</h2><ol class="lb-list"></ol>';
     }
-    if (MODE === "turtle" && window.GameMenu) {
+    if ((MODE === "turtle" || MODE === "nest") && window.GameMenu) {
       mountInCard(board);
     } else {
       board.parentNode.insertBefore(panel, board.nextSibling);
@@ -646,7 +650,8 @@
     HTMLActuator.prototype.actuate = function (grid, metadata) {
       actuate.call(this, grid, metadata);
       var changed = false;
-      var top = highestTile(grid);
+      // The egg mode's carried tiles count, though they are off the board.
+      var top = Math.max(highestTile(grid), window.extraTopTile ? window.extraTopTile() : 0);
       if (top > variant.top) {
         variant.top = top;
         write(VARIANT.top, String(top));

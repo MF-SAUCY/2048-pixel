@@ -1,4 +1,4 @@
-// Rule tests for the Fib, Threes and Turtle modes.
+// Rule tests for the Fib, Threes and Turtle modes, and Turtle's egg mode.
 //
 //   node tools/test_variants.js
 //
@@ -16,12 +16,13 @@ const context = vm.createContext({ Math, JSON, console });
 context.window = context;
 for (const file of ["js/grid.js", "js/tile.js", "js/local_storage_manager.js",
                     "js/game_manager.js", "fib/fib.js", "threes/threes.js",
-                    "turtle/turtle.js"]) {
+                    "turtle/turtle.js", "turtle/nest.js"]) {
   vm.runInContext(fs.readFileSync(path.join(app, file), "utf8"), context, { filename: file });
 }
 const Fib = vm.runInContext("Fib", context);
 const Threes = vm.runInContext("Threes", context);
 const Turtle = vm.runInContext("Turtle", context);
+const Nest = vm.runInContext("Nest", context);
 const Tile = vm.runInContext("Tile", context);
 
 const plain = (x) => JSON.parse(JSON.stringify(x));
@@ -358,7 +359,8 @@ test("turtle: a locked direction does not move; the others still do", () => {
   assert.strictEqual(g.lastMoved, false, "so a held up stops at once");
   assert.strictEqual(g.moves, 0);
   g.move(5);
-  assert.strictEqual(at(g, 2, 4), 0, "up-left is not locked: the tile moves");
+  // Checked where the tile went: a new tile can land where it was.
+  assert.strictEqual(at(g, 0, 4), 2, "up-left is not locked: the tile moves");
   g.toggleLock(0);
   assert.ok(!g.isLocked(0), "a second pick unlocks it");
 });
@@ -375,6 +377,160 @@ test("turtle: locks are saved with the game and cleared by a new game", () => {
   again.toggleLock(2);
   again.clearLocks();
   assert.deepStrictEqual(plain(again.locks), []);
+});
+
+/* ---- Turtle's egg mode ---- */
+
+function nest(Storage) {
+  const g = new Nest.NestManager(5, Input, Actuator, Storage || makeStorage());
+  clear(g);
+  return g;
+}
+// A full board with no equal neighbours (the three-colouring above), less any
+// cells given as "x,y".
+function fullBoard(g, except) {
+  const colours = [2, 4, 8];
+  g.grid.eachCell((x, y) => {
+    if ((except || []).includes(x + "," + y)) return;
+    put(g, x, y, colours[((x - 2 - (y - 2)) % 3 + 3) % 3]);
+  });
+}
+
+test("eggs: a 2048 on the tail lays as an undo or a slot", () => {
+  const g = nest();
+  put(g, 2, 4, 2048);
+  assert.ok(g.layable());
+  assert.ok(g.lay("undo"));
+  assert.strictEqual(at(g, 2, 4), 0, "the 2048 leaves the board");
+  assert.strictEqual(g.undos, 1);
+  assert.strictEqual(g.laid, 1);
+  put(g, 2, 4, 2048);
+  g.lay("slot");
+  assert.deepStrictEqual(plain(g.slots), [0], "a new empty slot");
+  assert.strictEqual(g.undos, 1);
+});
+
+test("eggs: only a 2048 on the tail can be laid", () => {
+  const g = nest();
+  put(g, 2, 3, 2048);
+  put(g, 2, 4, 4096);
+  assert.ok(!g.layable());
+  assert.ok(!g.lay("undo"));
+  assert.strictEqual(g.undos, 0);
+});
+
+test("eggs: past six slots, an egg is an undo", () => {
+  const g = nest();
+  g.slots = [0, 0, 0, 0, 0, 0];
+  put(g, 2, 4, 2048);
+  g.lay("slot");
+  assert.strictEqual(g.slots.length, Nest.SLOT_CAP);
+  assert.strictEqual(g.undos, 1);
+});
+
+test("eggs: a tile of 2048 or more can be carried into an empty slot", () => {
+  const g = nest();
+  g.slots = [0];
+  put(g, 1, 2, 1024);
+  assert.ok(!g.carry({ x: 1, y: 2 }), "a 1024 is too small");
+  put(g, 3, 1, 4096);
+  assert.ok(g.carry({ x: 3, y: 1 }));
+  assert.deepStrictEqual(plain(g.slots), [4096]);
+  assert.strictEqual(at(g, 3, 1), 0);
+  put(g, 3, 1, 8192);
+  assert.ok(!g.carry({ x: 3, y: 1 }), "no free slot");
+});
+
+test("eggs: a match made on the board jumps up and doubles the carried tile", () => {
+  const g = nest();
+  g.slots = [2048];
+  put(g, 2, 0, 1024);
+  put(g, 2, 1, 1024);
+  g.move(3); // down: the 1024s make a 2048 on the tail
+  assert.deepStrictEqual(plain(g.slots), [4096]);
+  let big = 0;
+  g.grid.eachCell((x, y, t) => { if (t && t.value >= 1024) big++; });
+  assert.strictEqual(big, 0, "the new 2048 left the board");
+  assert.strictEqual(g.score, 2048 + 4096, "both merges score");
+});
+
+test("eggs: carried tiles that become equal merge and free a slot", () => {
+  const g = nest();
+  g.slots = [4096, 2048];
+  put(g, 2, 0, 1024);
+  put(g, 2, 1, 1024);
+  g.move(3);
+  assert.deepStrictEqual(plain(g.slots), [8192, 0]);
+  assert.strictEqual(g.score, 2048 + 4096 + 8192);
+});
+
+test("eggs: undo takes back the last move and costs an undo", () => {
+  const g = nest();
+  g.undos = 2;
+  put(g, 2, 0, 2);
+  put(g, 2, 1, 2);
+  g.move(3);
+  assert.strictEqual(g.score, 4);
+  assert.ok(g.undo());
+  assert.strictEqual(g.score, 0);
+  assert.strictEqual(at(g, 2, 0), 2);
+  assert.strictEqual(at(g, 2, 1), 2);
+  let n = 0;
+  g.grid.eachCell((x, y, t) => { if (t) n++; });
+  assert.strictEqual(n, 2, "the new tile went too");
+  assert.strictEqual(g.undos, 1);
+  assert.ok(!g.undo(), "one move back only");
+});
+
+test("eggs: laying or carrying cannot be undone", () => {
+  const g = nest();
+  g.undos = 1;
+  put(g, 2, 2, 2048);
+  g.move(3);
+  assert.strictEqual(at(g, 2, 4), 2048);
+  g.lay("slot");
+  assert.ok(!g.canUndo());
+  assert.ok(!g.undo());
+  assert.strictEqual(g.undos, 1);
+});
+
+test("eggs: with no move left the game waits while something can help", () => {
+  const g = nest();
+  fullBoard(g);
+  assert.ok(!g.movesAvailable());
+  g.checkOver();
+  assert.ok(g.over, "nothing helps: over");
+
+  const h = nest();
+  fullBoard(h, ["2,4"]);
+  put(h, 2, 4, 2048);
+  h.checkOver();
+  assert.ok(!h.over && h.stuck, "the 2048 on the tail can be laid");
+
+  const k = nest();
+  k.slots = [0];
+  fullBoard(k, ["0,2"]);
+  put(k, 0, 2, 4096);
+  k.checkOver();
+  assert.ok(!k.over && k.stuck, "the 4096 can be carried");
+});
+
+test("eggs: no 2048 win, and the game reloads with its slots and undos", () => {
+  const Storage = makeStorage();
+  const g = nest(Storage);
+  g.slots = [8192, 0];
+  g.undos = 3;
+  put(g, 2, 0, 1024);
+  put(g, 2, 1, 1024);
+  g.move(3);
+  assert.ok(g.won && !g.isGameTerminated(), "a 2048 does not stop the game");
+  const again = new Nest.NestManager(5, Input, Actuator, Storage);
+  assert.deepStrictEqual(plain(again.slots), [8192, 0]);
+  assert.strictEqual(again.undos, 3);
+  assert.ok(again.canUndo(), "the last move can still be taken back");
+  again.restart();
+  assert.deepStrictEqual(plain(again.slots), []);
+  assert.strictEqual(again.undos, 0);
 });
 
 console.log("\n" + passed + " tests passed");
