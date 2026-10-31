@@ -39,6 +39,18 @@
         "Tap it twice to clear the locks.",
       "Matching tiles merge, as in 2048. Reach <b>2048</b> to win.",
       "Each new game brings a different turtle."
+    ],
+    // The egg mode's page is a 🐢48 page too; listed after it, so it wins.
+    nest: [
+      "Plain 🐢48, plus a <b>nest</b> on the tail cell at the bottom.",
+      "A <b>2048 on the nest</b> can be laid as an egg: tap it. The egg " +
+        "becomes an <b>undo</b> or a new <b>slot</b> on the turtle's back " +
+        "(up to six).",
+      "<b>Carry</b>: tap an empty slot, then a tile of 2048 or more. A carried " +
+        "tile still grows: make its match on the board and it jumps up and " +
+        "doubles.",
+      "Undo takes back your last move. Laying and carrying can't be undone. " +
+        "The game is over only when nothing can help."
     ]
   };
 

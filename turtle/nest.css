@@ -1,0 +1,237 @@
+/* 🐢48's egg mode (nest.html, nest.js), layered on turtle.css: the nest mark
+   on the tail cell, the bar of undo and slots under the board, its line of
+   help, and the card that asks what an egg becomes. */
+
+/* The bar (46px) and the help line (22px), with their gaps, sit between the
+   board and the pad: 80px more than plain 🐢48. Not yet measured on a phone. */
+@media (min-height: 561px) {
+  :root:has(.nest) {
+    --chrome: 252px;
+  }
+}
+
+/* ---- the nest, on the tail cell (centre 150, 273.9 in the art's units) ---- */
+
+.nest-mark {
+  position: absolute;
+  left: 50%;
+  top: 85.23%;
+  width: 20.5%;
+  height: 17.1%;
+  transform: translate(-50%, -50%);
+  z-index: 1; /* over the art (grid-container), under the tiles */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: var(--button);
+  color: var(--board-bg);
+  pointer-events: none;
+}
+
+.nest-mark svg {
+  width: 34%;
+  height: 34%;
+}
+
+/* A 2048 on the nest: the rim round it glows. */
+.nest-mark.is-ready {
+  background: var(--title-green);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nest-mark.is-ready {
+    animation: nest-glow 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes nest-glow {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+/* Picking a tile to carry: the ones too small to carry fade. */
+.game-container.is-picking .tile:not(.tile-2048):not(.tile-super) {
+  opacity: 0.35;
+}
+
+/* ---- the bar ---- */
+
+.nest-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.nest-undo {
+  position: relative;
+}
+
+.nest-undo:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.nest-count {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border-radius: 10px;
+  background: var(--button);
+  color: var(--ink-light);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+}
+
+.nest-slots {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.nest-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--board-bg);
+  color: var(--ink-light);
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nest-slot:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Not yet earned: an outline with an egg in it. */
+.nest-slot.is-locked {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--board-bg);
+  color: var(--board-bg);
+}
+
+.nest-slot.is-locked svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Waiting for a tile to carry. */
+.nest-slot.is-picking {
+  background: var(--title-green);
+  color: var(--ground);
+}
+
+/* A carried tile, in its own colour. */
+.nest-bar .nest-slot .tile-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--c);
+  color: var(--tile-ink);
+  box-shadow: none;
+  font-size: 15px;
+}
+
+.nest-bar .nest-slot.tile-super .tile-inner {
+  color: var(--ink-light);
+}
+
+.nest-bar .nest-slot.is-5 .tile-inner { font-size: 12.5px; }
+.nest-bar .nest-slot.is-6 .tile-inner { font-size: 10.5px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .nest-slot.is-jumped .tile-inner {
+    animation: nest-jump 320ms ease;
+  }
+}
+
+@keyframes nest-jump {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.nest-hint {
+  min-height: 22px;
+  margin: 6px 0 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 22px;
+  text-align: center;
+}
+
+/* ---- the egg card, over the board's upper half, clear of the tail ---- */
+
+.nest-choice {
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(78%, 300px);
+  padding: 14px 16px 16px;
+  border-radius: 8px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--ground) 96%, transparent);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+  color: var(--ink);
+}
+
+.nest-choice[hidden] {
+  display: none;
+}
+
+.nest-choice p {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.nest-choice button {
+  padding: 0 14px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--button);
+  color: var(--ink-light);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 42px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nest-choice button[hidden] {
+  display: none;
+}
+
+.nest-choice .nest-cancel {
+  background: transparent;
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.nest-choice button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
