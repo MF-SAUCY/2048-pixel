@@ -48,9 +48,9 @@
         "(up to six).",
       "<b>Carry</b>: tap an empty slot, then a tile of 2048 or more. A carried " +
         "tile still grows: make its match on the board and it jumps up and " +
-        "doubles.",
-      "Undo takes back your last move. Laying and carrying can't be undone. " +
-        "The game is over only when nothing can help."
+        "doubles. A match on the tail waits: tap it to <b>send it up</b>.",
+      "Undo takes back your last move. Laying, carrying and sending up can't " +
+        "be undone. The game is over only when nothing can help."
     ]
   };
 

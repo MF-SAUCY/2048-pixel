@@ -417,8 +417,12 @@ pair. It keeps plain 🐢48's casual pace and adds no pressure:
   still grows: when a move leaves a matching tile on the board, it jumps up
   and merges into the carried one (scored as a merge), and carried tiles
   that become equal merge too, freeing a slot.
-- **Undo** takes back the last move; the replay draws a fresh tile. Laying
-  and carrying can't be undone.
+- **A tile on the nest never jumps up** (2026-11-01). Before, a carried 2048
+  pulled up every new 2048 before it could be laid. Tapping the nest's tile
+  now offers "Send up to the carried …" when it has a carried match, beside
+  laying it when it is a 2048.
+- **Undo** takes back the last move; the replay draws a fresh tile. Laying,
+  carrying and sending up can't be undone.
 - With no move left the game waits while an undo, a lay or a carry could
   help, and says which. There is no 2048 win.
 

@@ -444,9 +444,9 @@ test("eggs: a tile of 2048 or more can be carried into an empty slot", () => {
 test("eggs: a match made on the board jumps up and doubles the carried tile", () => {
   const g = nest();
   g.slots = [2048];
-  put(g, 2, 0, 1024);
   put(g, 2, 1, 1024);
-  g.move(3); // down: the 1024s make a 2048 on the tail
+  put(g, 2, 2, 1024);
+  g.move(0); // up: the 1024s make a 2048 at the top
   assert.deepStrictEqual(plain(g.slots), [4096]);
   let big = 0;
   g.grid.eachCell((x, y, t) => { if (t && t.value >= 1024) big++; });
@@ -457,11 +457,39 @@ test("eggs: a match made on the board jumps up and doubles the carried tile", ()
 test("eggs: carried tiles that become equal merge and free a slot", () => {
   const g = nest();
   g.slots = [4096, 2048];
-  put(g, 2, 0, 1024);
   put(g, 2, 1, 1024);
-  g.move(3);
+  put(g, 2, 2, 1024);
+  g.move(0);
   assert.deepStrictEqual(plain(g.slots), [8192, 0]);
   assert.strictEqual(g.score, 2048 + 4096 + 8192);
+});
+
+test("eggs: a 2048 made on the tail stays to be laid, though a 2048 is carried", () => {
+  const g = nest();
+  g.slots = [2048];
+  put(g, 2, 2, 1024);
+  put(g, 2, 3, 1024);
+  g.move(3); // down: the 1024s make a 2048 on the tail
+  assert.deepStrictEqual(plain(g.slots), [2048], "the carried 2048 did not take it");
+  assert.strictEqual(at(g, 2, 4), 2048);
+  assert.ok(g.layable());
+  assert.ok(g.lay("undo"));
+  assert.strictEqual(g.undos, 1);
+});
+
+test("eggs: the tile on the tail can be sent up to its carried match", () => {
+  const g = nest();
+  g.slots = [8192, 4096];
+  put(g, 2, 4, 4096);
+  assert.ok(!g.layable());
+  assert.strictEqual(g.sendSlot(), 1);
+  assert.ok(g.sendUp());
+  assert.strictEqual(at(g, 2, 4), 0);
+  assert.deepStrictEqual(plain(g.slots), [16384, 0], "the 8192 then joins the 8192");
+  assert.strictEqual(g.score, 8192 + 16384);
+  assert.ok(!g.canUndo(), "sending up can't be undone");
+  put(g, 2, 4, 512);
+  assert.ok(!g.sendUp(), "no carried 512");
 });
 
 test("eggs: undo takes back the last move and costs an undo", () => {
@@ -513,6 +541,12 @@ test("eggs: with no move left the game waits while something can help", () => {
   put(k, 0, 2, 4096);
   k.checkOver();
   assert.ok(!k.over && k.stuck, "the 4096 can be carried");
+
+  const m = nest();
+  m.slots = [4]; // the three-colouring puts a 4 on the tail
+  fullBoard(m);
+  m.checkOver();
+  assert.ok(!m.over && m.stuck, "the 4 on the tail can be sent up");
 });
 
 test("eggs: no 2048 win, and the game reloads with its slots and undos", () => {
