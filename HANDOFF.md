@@ -193,7 +193,8 @@ Claude's memory note `turtle-egg-mode`. In short:
 - **UI:** a ×2 button left of the lock (lock's look; lit with ✓ and "n/3"
   while picking, outlined when stuck), no button row or help line; title
   🐢48 with a small x; "🐢48x vN" at the page foot. v8 (both turtle pages):
-  no moves box, New Game a ↻ icon, so the title is bigger (README). **Bump `VERSION` in
+  no moves box, New Game a ↻ icon, so the title is bigger (README). v9:
+  Turn the turtle's menu icon is a rounded right-angle arrow, not a circle. **Bump `VERSION` in
   `turtle48x.js` with every change to the mode.**
 - **Files:** `app/turtle/turtle48x.html`, `turtle48x.js`, `turtle48x.css`
   (built on `turtle.js` / `turtle.css`, which now take a board radius of 2
