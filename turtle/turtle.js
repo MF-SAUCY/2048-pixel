@@ -1221,9 +1221,11 @@
     'stroke-width="3" stroke-linecap="round" aria-hidden="true">' +
     '<path d="M6 6l12 12M18 6 6 18"/></svg>';
 
+  // A right-angle turn with a rounded corner (2026-11-01), so it doesn't read
+  // as New Game's ↻.
   var TURN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
     'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>';
+    '<path d="M5 20v-7a6 6 0 0 1 6-6h8"/><path d="M15.5 3.5 19 7l-3.5 3.5"/></svg>';
 
   if (typeof document !== "undefined" && document.querySelector(".turtle")) {
     root.fxCellCenter = fxCellCenter;
