@@ -31,6 +31,10 @@
 
   var NEST = { x: 2, y: 4 };  // the tail cell
   var SLOT_CAP = 6;
+  // Shown small at the foot of the page, so a phone can be checked against
+  // the latest deploy while the mode is being tested. Bump it with every
+  // change to the mode: 1 first release, 2 the nest never jumps up, 3 this.
+  var VERSION = 3;
   var EGG = 2048;             // what can be laid
   var CARRY_MIN = 2048;       // what can be carried
 
@@ -292,6 +296,12 @@
 
     board.parentNode.insertBefore(hint, board.nextSibling);
     board.parentNode.insertBefore(bar, board.nextSibling);
+
+    // Last on the page, under the pad (buildPad has already run).
+    var version = document.createElement("p");
+    version.className = "nest-version";
+    version.textContent = "Egg mode v" + VERSION;
+    board.parentNode.appendChild(version);
 
     var mark = document.createElement("div");
     mark.className = "nest-mark";
