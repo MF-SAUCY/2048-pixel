@@ -3,11 +3,23 @@
    help, and the card that asks what an egg becomes. */
 
 /* The bar (46px) and the help line (22px), with their gaps, sit between the
-   board and the pad: 80px more than plain 🐢48. Not yet measured on a phone. */
+   board and the pad: 80px more than plain 🐢48; the version line under the
+   pad adds 22 more. Not yet measured on a phone. */
 @media (min-height: 561px) {
   :root:has(.nest) {
-    --chrome: 252px;
+    --chrome: 274px;
   }
+}
+
+/* The mode's version, small at the foot of the page, for checking a phone
+   is on the latest deploy while the mode is tested. */
+.nest-version {
+  margin: -6px 0 0;
+  color: var(--ink);
+  opacity: 0.5;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
 }
 
 /* ---- the nest, on the tail cell (centre 150, 273.9 in the art's units) ---- */
