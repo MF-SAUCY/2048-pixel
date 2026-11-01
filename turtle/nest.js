@@ -10,10 +10,14 @@
  *     board, it jumps up and merges into the carried one, scoring as a merge,
  *     and carried tiles that become equal merge too, freeing a slot. This
  *     happens before the new tile appears.
- *   - Undo takes back the last move (the replay draws a fresh tile). Laying
- *     and carrying cannot be undone, and clear the move they follow.
- *   - With no move left, the game waits while an undo, a lay or a carry could
- *     still help; only then is it over. There is no 2048 win.
+ *   - A tile on the nest never jumps up (2026-11-01: a carried 2048 was
+ *     swallowing every new 2048 before it could be laid). Tapping it instead
+ *     offers to send it up when it matches a carried tile, beside laying it
+ *     when it is a 2048.
+ *   - Undo takes back the last move (the replay draws a fresh tile). Laying,
+ *     carrying and sending up cannot be undone, and clear the move they follow.
+ *   - With no move left, the game waits while an undo, a lay, a send or a
+ *     carry could still help; only then is it over. There is no 2048 win.
  *
  * Its own saved game and best score (nest-state, nest-best) and its own
  * leaderboard columns (nest_best, nest_top). Built on turtle.js.
@@ -91,9 +95,10 @@
     this.settle();
   };
 
-  // Board tiles that match a carried tile jump up and merge into it; carried
-  // tiles that become equal merge, the left one keeping the tile. Repeats
-  // until nothing more matches.
+  // Board tiles that match a carried tile jump up and merge into it, except
+  // the one on the nest, which waits to be laid or sent up; carried tiles
+  // that become equal merge, the left one keeping the tile. Repeats until
+  // nothing more matches.
   NestManager.prototype.settle = function () {
     var changed = true;
     while (changed) {
@@ -103,7 +108,8 @@
         if (!value) continue;
         var match = null;
         this.grid.eachCell(function (x, y, tile) {
-          if (!match && tile && tile.value === value) match = tile;
+          var onNest = x === NEST.x && y === NEST.y;
+          if (!match && tile && tile.value === value && !onNest) match = tile;
         });
         if (match) {
           this.grid.removeTile(match);
@@ -132,6 +138,12 @@
     return !!(tile && tile.value === EGG);
   };
 
+  // The slot holding a carried match for the tile on the nest, or -1.
+  NestManager.prototype.sendSlot = function () {
+    var tile = this.grid.cellContent(NEST);
+    return tile ? this.slots.indexOf(tile.value) : -1;
+  };
+
   NestManager.prototype.freeSlot = function () {
     return this.slots.indexOf(0);
   };
@@ -149,7 +161,7 @@
   };
 
   NestManager.prototype.canRescue = function () {
-    return this.canUndo() || this.layable() ||
+    return this.canUndo() || this.layable() || this.sendSlot() !== -1 ||
            (this.freeSlot() !== -1 && this.carryable().length > 0);
   };
 
@@ -183,6 +195,20 @@
     }
     this.history = null;
     this.jumped = [];
+    this.afterAction();
+    return true;
+  };
+
+  // The tile on the nest joins its carried match, which doubles.
+  NestManager.prototype.sendUp = function () {
+    var s = this.sendSlot();
+    if (this.over || s === -1) return false;
+    this.grid.removeTile(this.grid.cellContent(NEST));
+    this.slots[s] *= 2;
+    this.score += this.slots[s];
+    this.history = null;
+    this.jumped = [s];
+    this.settle();
     this.afterAction();
     return true;
   };
@@ -276,9 +302,10 @@
     choice.className = "nest-choice";
     choice.hidden = true;
     choice.innerHTML =
-      '<p>Lay this 2048 as an egg?</p>' +
+      '<p class="nest-ask"></p>' +
       '<button type="button" data-choice="undo">Keep as an undo</button>' +
       '<button type="button" data-choice="slot"></button>' +
+      '<button type="button" data-choice="send"></button>' +
       '<button type="button" class="nest-cancel" data-choice="cancel">Not now</button>';
     board.appendChild(choice);
 
@@ -297,7 +324,10 @@
     var undoButton = ui.bar.querySelector(".nest-undo");
     var count = ui.bar.querySelector(".nest-count");
     var slotButtons = ui.bar.querySelectorAll(".nest-slot");
+    var ask = ui.choice.querySelector(".nest-ask");
+    var undoChoice = ui.choice.querySelector('[data-choice="undo"]');
     var slotChoice = ui.choice.querySelector('[data-choice="slot"]');
+    var sendChoice = ui.choice.querySelector('[data-choice="send"]');
 
     function say(text) {
       note = text;
@@ -342,25 +372,35 @@
       }
       game.jumped = [];
 
-      var ready = !game.over && game.layable();
-      ui.mark.classList.toggle("is-ready", ready);
+      var lay = !game.over && game.layable();
+      var send = !game.over && game.sendSlot() !== -1;
+      ui.mark.classList.toggle("is-ready", lay || send);
       ui.board.classList.toggle("is-stuck", game.stuck);
 
       var text = note;
       if (!text) {
         if (picking) text = "Tap a tile of 2048 or more to carry it.";
         else if (game.stuck) text = "No moves left: " + rescues(game) + ".";
-        else if (ready) text = "Tap the 2048 on the tail to lay an egg.";
+        else if (lay && send) text = "Tap the 2048 on the tail to lay it or send it up.";
+        else if (lay) text = "Tap the 2048 on the tail to lay an egg.";
+        else if (send) text = "Tap the " + nestValue(game) + " on the tail to send it up.";
       }
       ui.hint.textContent = text;
     }
 
+    // A 2048 can be laid, and sent up too if one is carried; a bigger tile
+    // with a carried match can only be sent up.
     function openChoice() {
-      var room = game.slots.length < SLOT_CAP;
-      slotChoice.hidden = !room;
+      var lay = game.layable();
+      var value = nestValue(game);
+      ask.textContent = lay ? "Lay this 2048 as an egg?" : "Send this " + value + " up?";
+      undoChoice.hidden = !lay;
+      slotChoice.hidden = !lay || game.slots.length >= SLOT_CAP;
       slotChoice.textContent = "New slot (" + (game.slots.length + 1) + " of " + SLOT_CAP + ")";
+      sendChoice.hidden = game.sendSlot() === -1;
+      sendChoice.textContent = "Send up to the carried " + value;
       ui.choice.hidden = false;
-      ui.choice.querySelector("button").focus();
+      ui.choice.querySelector("button:not([hidden])").focus();
     }
 
     function closeChoice() {
@@ -373,6 +413,7 @@
       var c = button.getAttribute("data-choice");
       closeChoice();
       if (c === "undo" || c === "slot") game.lay(c);
+      if (c === "send") game.sendUp();
     });
 
     undoButton.addEventListener("click", function () {
@@ -388,7 +429,8 @@
         if (s >= game.slots.length) {
           say("Lay a 2048 on the tail to earn this slot.");
         } else if (game.slots[s]) {
-          say("Make another " + game.slots[s] + " and it jumps up to join this one.");
+          say("Make another " + game.slots[s] + " and it jumps up to join this one " +
+              "(on the tail, tap it to send it up).");
         } else if (picking) {
           setPicking(false);
           render();
@@ -401,8 +443,8 @@
       });
     }
 
-    // A tap on the board (not a swipe): carry while picking, or lay the 2048
-    // on the nest.
+    // A tap on the board (not a swipe): carry while picking, or lay or send
+    // up the tile on the nest.
     var down = null;
     ui.board.addEventListener("pointerdown", function (e) {
       down = e.isPrimary && !e.target.closest(".nest-choice") ? { x: e.clientX, y: e.clientY } : null;
@@ -420,7 +462,8 @@
         if (!game.carry(cell)) render();
         return;
       }
-      if (cell.x === NEST.x && cell.y === NEST.y && game.layable() && !game.over) openChoice();
+      var onNest = cell.x === NEST.x && cell.y === NEST.y;
+      if (onNest && !game.over && (game.layable() || game.sendSlot() !== -1)) openChoice();
     });
 
     // Any move settles the page: the card closes and picking stops.
@@ -443,8 +486,14 @@
     var ways = [];
     if (game.canUndo()) ways.push("undo");
     if (game.layable()) ways.push("lay the 2048");
+    if (game.sendSlot() !== -1) ways.push("send the " + nestValue(game) + " up");
     if (game.freeSlot() !== -1 && game.carryable().length) ways.push("carry a tile");
     return ways.length > 1 ? ways.slice(0, -1).join(", ") + " or " + ways[ways.length - 1] : ways[0];
+  }
+
+  function nestValue(game) {
+    var tile = game.grid.cellContent(NEST);
+    return tile ? tile.value : 0;
   }
 
   // The board cell under a point on the page, or null.
