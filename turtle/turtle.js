@@ -30,7 +30,7 @@
   "use strict";
 
   var SIZE = 5;     // the 5x5 array; 19 of its cells are on the board
-  var RADIUS = 2;
+  var RADIUS = 2;   // 🐢48x's grown turtle is radius 3: a 7x7 array, 37 cells
 
   // Axial steps for the six directions, clockwise from up. On screen, with the
   // flat side up, q runs right and r runs down.
@@ -47,19 +47,27 @@
   var ANGLES = [-90, -30, 30, 90, 150, -150];
 
   // Drawing geometry, in the art's own units: viewBox 0 8 300 312, cells
-  // centred on (150, 170), 30 from a cell's centre to its corner.
+  // centred on (150, 170), 30 from a cell's centre to its corner. A board of
+  // another radius keeps the same 240 width inside the same shell, so its
+  // cells are smaller.
   var VIEW = { x: 0, y: 8, w: 300, h: 312 };
-  var S = 30;
 
-  function inHex(x, y) {
-    var q = x - RADIUS;
-    var r = y - RADIUS;
-    return x >= 0 && x < SIZE && y >= 0 && y < SIZE && Math.abs(q + r) <= RADIUS;
+  function cellSize(radius) {
+    return 240 / (3 * (radius || RADIUS) + 2);
   }
 
-  function cellCentre(x, y) {
-    var q = x - RADIUS;
-    var r = y - RADIUS;
+  function inHex(x, y, radius) {
+    radius = radius || RADIUS;
+    var q = x - radius;
+    var r = y - radius;
+    return x >= 0 && x <= 2 * radius && y >= 0 && y <= 2 * radius && Math.abs(q + r) <= radius;
+  }
+
+  function cellCentre(x, y, radius) {
+    radius = radius || RADIUS;
+    var S = cellSize(radius);
+    var q = x - radius;
+    var r = y - radius;
     return { x: 150 + 1.5 * S * q, y: 170 + Math.sqrt(3) * S * (r + q / 2) };
   }
 
@@ -80,8 +88,10 @@
 
   /* ---- the grid ---- */
 
+  // size 5 (radius 2, 19 cells) unless given: 🐢48x's grown board is 7.
   function HexGrid(size, previousState) {
-    root.Grid.call(this, SIZE, previousState);
+    root.Grid.call(this, size || SIZE, previousState);
+    this.radius = (this.size - 1) / 2;
   }
 
   if (root.Grid) {
@@ -90,14 +100,14 @@
   }
 
   HexGrid.prototype.withinBounds = function (position) {
-    return inHex(position.x, position.y);
+    return inHex(position.x, position.y, this.radius);
   };
 
-  // Only the 19 board cells; availableCells and so randomAvailableCell follow.
+  // Only the board cells; availableCells and so randomAvailableCell follow.
   HexGrid.prototype.eachCell = function (callback) {
-    for (var x = 0; x < SIZE; x++) {
-      for (var y = 0; y < SIZE; y++) {
-        if (inHex(x, y)) callback(x, y, this.cells[x][y]);
+    for (var x = 0; x < this.size; x++) {
+      for (var y = 0; y < this.size; y++) {
+        if (inHex(x, y, this.radius)) callback(x, y, this.cells[x][y]);
       }
     }
   };
@@ -133,7 +143,7 @@
       ? this.storageManager.getLastSkin() : null);
 
     if (previousState && previousState.hex) {
-      this.grid = new HexGrid(SIZE, previousState.grid.cells);
+      this.grid = new HexGrid(previousState.grid.size || SIZE, previousState.grid.cells);
       this.score = previousState.score;
       this.over = previousState.over;
       this.won = previousState.won;
@@ -203,7 +213,7 @@
 
   TurtleManager.prototype.actuate = function () {
     root.GameManager.prototype.actuate.call(this);
-    if (this.actuator.setSkin) this.actuator.setSkin(this.skin, this.over);
+    if (this.actuator.setSkin) this.actuator.setSkin(this.skin, this.over, this.grid.radius);
     if (this.actuator.setTurn) this.actuator.setTurn(this.turn);
     if (this.onLocks) this.onLocks(this.locks);
   };
@@ -240,8 +250,9 @@
     var ux = Math.cos(a);
     var uy = Math.sin(a);
     var cells = [];
+    var radius = this.grid.radius;
     this.grid.eachCell(function (x, y) {
-      var c = cellCentre(x, y);
+      var c = cellCentre(x, y, radius);
       cells.push({ x: x, y: y, along: c.x * ux + c.y * uy });
     });
     cells.sort(function (p, q) { return q.along - p.along; });
@@ -295,7 +306,7 @@
     }
   };
 
-  // Hooks for the egg mode (nest.js): after the tiles slide, before the new
+  // Hooks for 🐢48x (turtle48x.js): after the tiles slide, before the new
   // tile; and the end-of-move check for game over.
   TurtleManager.prototype.afterSlide = function () {};
 
@@ -360,12 +371,11 @@
     HexInputManager.prototype.constructor = HexInputManager;
   }
 
-  // The pad, and the egg mode's bar and choice card, handle their own
-  // presses, so a gesture that starts on them is not a swipe.
+  // The pad and the buttons beside it handle their own presses, so a gesture
+  // that starts on them is not a swipe.
   HexInputManager.prototype.isControl = function (target) {
     return root.KeyboardInputManager.prototype.isControl.call(this, target) ||
-           !!(target && target.closest &&
-              target.closest(".turtle-pad, .nest-bar, .nest-choice"));
+           !!(target && target.closest && target.closest(".turtle-controls"));
   };
 
   // Set by TurtleManager: whether the last move changed the board.
@@ -740,16 +750,18 @@
    * Glider, Garden Keeper and Pocket Pal are Astra's.
    */
 
-  function scutes() {
+  function scutes(radius) {
+    radius = radius || RADIUS;
     var out = "";
-    for (var x = 0; x < SIZE; x++) {
-      for (var y = 0; y < SIZE; y++) {
-        if (!inHex(x, y)) continue;
-        var c = cellCentre(x, y);
+    var corner = 28 * cellSize(radius) / 30;
+    for (var x = 0; x <= 2 * radius; x++) {
+      for (var y = 0; y <= 2 * radius; y++) {
+        if (!inHex(x, y, radius)) continue;
+        var c = cellCentre(x, y, radius);
         var pts = [];
         for (var i = 0; i < 6; i++) {
           var a = Math.PI / 3 * i;
-          pts.push((c.x + Math.cos(a) * 28).toFixed(2) + "," + (c.y + Math.sin(a) * 28).toFixed(2));
+          pts.push((c.x + Math.cos(a) * corner).toFixed(2) + "," + (c.y + Math.sin(a) * corner).toFixed(2));
         }
         out += '<polygon class="scute" points="' + pts.join(" ") + '"/>';
       }
@@ -841,9 +853,9 @@
       '<path class="smile" d="M289 166 Q294 170 289 174"/>'
   };
 
-  function artFor(skin) {
+  function artFor(skin, radius) {
     return '<svg class="turtle-art" viewBox="' + VIEW.x + " " + VIEW.y + " " + VIEW.w + " " + VIEW.h +
-           '" aria-hidden="true" focusable="false">' + (ART[skin] || ART.sage) + scutes() + "</svg>";
+           '" aria-hidden="true" focusable="false">' + (ART[skin] || ART.sage) + scutes(radius) + "</svg>";
   }
 
   /* ---- rendering ---- */
@@ -853,9 +865,10 @@
     this.board = document.querySelector(".game-container");
     this.gridEl = document.querySelector(".grid-container");
     this.skin = null;
+    this.radius = null;
     this.strokeTimer = null;
     // The art and the tiles turn together in one layer; the message, cards
-    // and sparks stay upright outside it. (The egg mode's nest mark joins.)
+    // and sparks stay upright outside it. (🐢48x's picked tiles join.)
     this.rotor = document.createElement("div");
     this.rotor.className = "turtle-rotor";
     this.board.insertBefore(this.rotor, this.gridEl);
@@ -875,11 +888,16 @@
     TurtleActuator.prototype.constructor = TurtleActuator;
   }
 
-  TurtleActuator.prototype.setSkin = function (skin, over) {
-    if (skin !== this.skin) {
+  // radius 3 is 🐢48x's grown turtle: is-grown sizes and places its tiles
+  // (turtle48x.css).
+  TurtleActuator.prototype.setSkin = function (skin, over, radius) {
+    radius = radius || RADIUS;
+    if (skin !== this.skin || radius !== this.radius) {
       this.skin = skin;
-      this.gridEl.innerHTML = artFor(skin);
+      this.radius = radius;
+      this.gridEl.innerHTML = artFor(skin, radius);
       this.board.setAttribute("data-skin", skin);
+      this.board.classList.toggle("is-grown", radius === 3);
     }
     // Garden Keeper pulls its head in when the game is over.
     this.board.classList.toggle("is-over", !!over);
@@ -923,7 +941,7 @@
    *   Pocket Pal    wag     tail wags              the first 128, 256 and 512
    *                 squint  happy squint           the first 1024
    *
-   * The top tile counts carried tiles in the egg mode. One movement at most
+   * One movement at most
    * per move, none within 8 s of the last, nothing once the game is over, and
    * none when the phone asks for reduced motion (the CSS is behind it).
    */
@@ -1000,7 +1018,6 @@
     grid.eachCell(function (x, y, tile) {
       if (tile && tile.value > top) top = tile.value;
     });
-    if (root.extraTopTile) top = Math.max(top, root.extraTopTile());
     var now = Date.now();
 
     // A page load or a new game sets the baseline without a movement.
@@ -1009,8 +1026,8 @@
       this.waitIdle();
       return;
     }
-    // Going back a move (the egg mode's undo) keeps the highs already
-    // reached, so replaying a milestone does not replay its movement.
+    // Going back a move keeps the highs already reached, so replaying a
+    // milestone does not replay its movement.
     if (meta.moves < this.mood.moves) {
       this.mood.moves = meta.moves;
       return;
@@ -1024,7 +1041,7 @@
       clearTimeout(this.idleTimer);
       return;
     }
-    if (!moved) return; // a lay, carry or send up: no movement of its own
+    if (!moved) return; // 🐢48x's Double: no movement of its own
     var still = now - this.mood.at;
     this.mood.at = now;
     var name = this.pickCue(before, top, still);
@@ -1052,14 +1069,16 @@
     }, 800);
   };
 
-  /* --chrome (turtle.css, nest.css) is the page's height around the board,
+  /* --chrome (turtle.css, turtle48x.css) is the page's height around the board,
    * measured on one screen at one text size. A phone with larger text runs
    * taller, and the board, which must keep its shape, would be pushed off the
    * foot of the page. So once the page is built, and again on a resize, the
    * real overflow is measured and --chrome raised until the board is small
-   * enough: the board and pad scale together, 1.4755 board widths tall
-   * (turtle.css), so a board narrower by d frees 1.4755 d. A few passes,
-   * since the pad stops growing at 210px. */
+   * enough: the board and pad scale together, the pad 0.4355 board widths
+   * tall and the board 1.04 (turtle.css; 🐢48x's grown board is taller, so
+   * its height is measured), so a board narrower by d frees about
+   * 1.4755 d. A few passes, since the pad stops growing at 210px. */
+  var PAD_TALL = 0.4355;
   var BOARD_AND_PAD = 1.4755;
 
   function overflow(container) {
@@ -1087,8 +1106,10 @@
     for (var pass = 0; pass < 4; pass++) {
       var excess = overflow(container);
       if (excess <= 0.5) return;
-      var width = board.getBoundingClientRect().width;
-      var target = width - excess / BOARD_AND_PAD - 1;
+      var width = container.clientWidth; // the container is --board wide
+      var ratio = board.getBoundingClientRect().height / width + PAD_TALL;
+      var target = width - excess / ratio - 1;
+      // turtle.css sizes the board as (height - --chrome) / 1.4755.
       html.style.setProperty("--chrome",
         Math.ceil(container.clientHeight - target * BOARD_AND_PAD) + "px");
     }
@@ -1105,12 +1126,44 @@
     };
   }
 
+  /* Art units to board pixels and back, through the rotor's turn and zoom
+   * (--zoom, 🐢48x's grown turtle). The rotor's box is its layout box, before
+   * its transform; the turn and zoom are about the shell's centre. */
+  function rotorFrame() {
+    var board = document.querySelector(".game-container");
+    var rotor = board && board.querySelector(".turtle-rotor");
+    if (!rotor) return null;
+    var unit = rotor.offsetWidth / VIEW.w;
+    return {
+      board: board,
+      unit: unit,
+      zoom: parseFloat(getComputedStyle(board).getPropertyValue("--zoom")) || 1,
+      x: rotor.offsetLeft + (150 - VIEW.x) * unit,
+      y: rotor.offsetTop + (170 - VIEW.y) * unit
+    };
+  }
+
+  function artToBoard(c, turn) {
+    var f = rotorFrame();
+    var t = turned(c, turn);
+    return { x: f.x + (t.x - 150) * f.unit * f.zoom, y: f.y + (t.y - 170) * f.unit * f.zoom };
+  }
+
+  // A point on the page to art units, turned back upright.
+  function pageToArt(px, py, turn) {
+    var f = rotorFrame();
+    var rect = f.board.getBoundingClientRect();
+    var k = f.unit * f.zoom;
+    return turned({
+      x: 150 + (px - rect.left - f.x) / k,
+      y: 170 + (py - rect.top - f.y) / k
+    }, -(turn || 0));
+  }
+
   // Spark centres for effects.js, in board pixels, where the cell is shown.
-  function fxCellCenter(x, y, width) {
+  function fxCellCenter(x, y) {
     var game = root.Turtle && root.Turtle.game;
-    var c = turned(cellCentre(x, y), game && game.turn);
-    var scale = width / VIEW.w;
-    return { x: (c.x - VIEW.x) * scale, y: (c.y - VIEW.y) * scale };
+    return artToBoard(cellCentre(x, y, game && game.grid && game.grid.radius), game && game.turn);
   }
 
   root.Turtle = {
@@ -1123,7 +1176,9 @@
     directionOf: directionOf,
     inHex: inHex,
     cellCentre: cellCentre,
+    cellSize: cellSize,
     turned: turned,
+    pageToArt: pageToArt,
     fitPage: fitPage,
     SIZE: SIZE,
     VECTORS: VECTORS,
@@ -1131,9 +1186,10 @@
     VIEW: VIEW
   };
 
-  // An egg, for the menu's switch between plain 🐢48 and the egg mode.
-  var EGG_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
-    '<path d="M12 2.5c-3.7 0-6.8 5.6-6.8 10.4a6.8 6.8 0 0 0 13.6 0C18.8 8.1 15.7 2.5 12 2.5z"/></svg>';
+  // An ×, for the menu's switch between plain 🐢48 and 🐢48x.
+  var X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="3" stroke-linecap="round" aria-hidden="true">' +
+    '<path d="M6 6l12 12M18 6 6 18"/></svg>';
 
   var TURN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
     'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -1141,7 +1197,7 @@
 
   if (typeof document !== "undefined" && document.querySelector(".turtle")) {
     root.fxCellCenter = fxCellCenter;
-    var eggs = !!document.querySelector(".nest");
+    var x48 = !!document.querySelector(".turtle48x");
     if (root.GameMenu) {
       // A setting: it turns in place, the menu staying open, and shows how
       // far this turtle is turned.
@@ -1158,13 +1214,13 @@
         }
       });
       root.GameMenu.add({
-        label: function () { return eggs ? "Plain 🐢48" : "Egg mode"; },
-        icon: function () { return EGG_ICON; },
-        run: function () { window.location.href = eggs ? "./" : "nest.html"; }
+        label: function () { return x48 ? "Plain 🐢48" : "🐢48x"; },
+        icon: function () { return X_ICON; },
+        run: function () { window.location.href = x48 ? "./" : "turtle48x.html"; }
       });
     }
-    // The egg mode starts its own game (nest.js), and fits the page itself.
-    if (!eggs) {
+    // 🐢48x starts its own game (turtle48x.js), and fits the page itself.
+    if (!x48) {
       window.requestAnimationFrame(function () {
         root.Turtle.game = new TurtleManager(SIZE, HexInputManager, TurtleActuator, TurtleStorage);
         buildPad(root.Turtle.game);
