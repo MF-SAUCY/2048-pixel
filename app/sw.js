@@ -19,7 +19,7 @@
  *   the previous display mode. Offline, the cached copy still answers.
  */
 
-var CACHE = "2048-pixel-d3cbc94965";
+var CACHE = "2048-pixel-25a43e2d7d";
 
 var SHELL = [
   "./",
