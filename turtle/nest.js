@@ -35,8 +35,9 @@
   // the latest deploy while the mode is being tested. Bump it with every
   // change to the mode: 1 first release, 2 the nest never jumps up, 3 this
   // line, 4 turning the turtle and the turtles' new movements, 5 the board
-  // keeps its shape on any screen and clips the turned turtle.
-  var VERSION = 5;
+  // keeps its shape on any screen and clips the turned turtle, 6 undo asks
+  // for a second tap.
+  var VERSION = 6;
   var EGG = 2048;             // what can be laid
   var CARRY_MIN = 2048;       // what can be carried
 
@@ -356,12 +357,27 @@
       ui.board.classList.toggle("is-picking", picking);
     }
 
+    // Undo asks first (2026-11-01: each one cost a 2048, and the button sits
+    // beside the slots): the first tap outlines it, as New Game and the lock
+    // ask, and a second within three seconds undoes. Anything else calls it off.
+    var undoArmed = false;
+    var undoTimer = null;
+
+    function disarmUndo() {
+      if (!undoArmed) return;
+      undoArmed = false;
+      clearTimeout(undoTimer);
+      render();
+    }
+
     function render() {
+      if (!game.canUndo()) undoArmed = false;
       count.textContent = game.undos;
       undoButton.disabled = !game.canUndo();
+      undoButton.classList.toggle("is-armed", undoArmed);
       var label = game.undos === 1 ? "1 undo" : game.undos + " undos";
-      undoButton.setAttribute("aria-label", "Undo (" + label + ")");
-      undoButton.setAttribute("title", "Undo (" + label + ")");
+      undoButton.setAttribute("aria-label", undoArmed ? "Tap again to undo" : "Undo (" + label + ")");
+      undoButton.setAttribute("title", undoArmed ? "Tap again to undo" : "Undo (" + label + ")");
 
       var jumped = game.jumped || [];
       for (var i = 0; i < slotButtons.length; i++) {
@@ -394,7 +410,8 @@
 
       var text = note;
       if (!text) {
-        if (picking) text = "Tap a tile of 2048 or more to carry it.";
+        if (undoArmed) text = "Tap undo again to take back your last move.";
+        else if (picking) text = "Tap a tile of 2048 or more to carry it.";
         else if (game.stuck) text = "No moves left: " + rescues(game) + ".";
         else if (lay && send) text = "Tap the 2048 on the tail to lay it or send it up.";
         else if (lay) text = "Tap the 2048 on the tail to lay an egg.";
@@ -427,6 +444,7 @@
       if (!button) return;
       var c = button.getAttribute("data-choice");
       closeChoice();
+      disarmUndo();
       if (c === "undo" || c === "slot") game.lay(c);
       if (c === "send") game.sendUp();
     });
@@ -434,6 +452,15 @@
     undoButton.addEventListener("click", function () {
       closeChoice();
       setPicking(false);
+      if (!undoArmed) {
+        undoArmed = true;
+        clearTimeout(undoTimer);
+        undoTimer = setTimeout(disarmUndo, game.inputManager.restartArmMs || 3000);
+        render();
+        return;
+      }
+      undoArmed = false;
+      clearTimeout(undoTimer);
       game.undo();
     });
 
@@ -441,6 +468,7 @@
       slotButtons[i].addEventListener("click", function () {
         var s = parseInt(this.getAttribute("data-slot"), 10);
         closeChoice();
+        disarmUndo();
         if (s >= game.slots.length) {
           say("Lay a 2048 on the tail to earn this slot.");
         } else if (game.slots[s]) {
@@ -472,6 +500,7 @@
       if (dx * dx + dy * dy > 100) return;
       var cell = cellAt(ui.board, e.clientX, e.clientY, game.turn);
       if (!cell) return;
+      disarmUndo();
       if (picking) {
         setPicking(false);
         if (!game.carry(cell)) render();
@@ -485,11 +514,13 @@
     game.inputManager.on("move", function () {
       closeChoice();
       if (picking) setPicking(false);
+      disarmUndo();
     });
     game.inputManager.on("restart", function () {
       closeChoice();
       setPicking(false);
       note = "";
+      disarmUndo();
     });
 
     game.onNest = render;
