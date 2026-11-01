@@ -356,6 +356,12 @@ hooks work unchanged (effects.js asks the page for spark positions through
 `window.fxTileToken`). Each new game draws one of four turtles, never the one
 just played:
 
+**The turtle pages' heading** (2026-11-01): no moves box, and New Game is a
+↻ icon the size of the menu button (it asks twice with the outline alone,
+`HexInputManager.confirmRestart`), so the title box is 272px wide on a 412px
+phone and the title runs up to 120px. "🐢48" measured 2.53em wide in
+Chromium, so it is sized at 100cqi / 2.6; "🐢48x" at 2.8.
+
 - **Sage** — sage skin (`#9aab7c` day, `#56654a` night), oval flippers.
 - **Reef Glider** — a sea turtle in teal (`#718f87` / `#536d66`) with marginal
   seams; its front flippers stroke once after a merge of 256 or more.

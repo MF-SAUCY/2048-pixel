@@ -63,10 +63,24 @@
   }
 }
 
-/* The emoji keeps its own colours; only the 48 takes the green. */
+/* The emoji keeps its own colours; only the 48 takes the green. With New
+   Game an icon and no moves box (2026-11-01) the title box is 272px wide on a
+   412px phone, so the cap is 120px rather than 90. "🐢48" measured 2.53em in
+   Chromium (the emoji's width varies by font), so 2.6 rather than 2.4. */
 .turtle h1.title {
-  font-size: clamp(22px, calc(100cqi / 2.4), 90px);
+  font-size: clamp(22px, calc(100cqi / 2.6), 120px);
   color: var(--title-green);
+}
+
+/* New Game as a ↻ icon, the menu button's size. */
+.turtle .restart-button.restart-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  line-height: normal;
 }
 
 /* ---- the pad ----
