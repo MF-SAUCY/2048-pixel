@@ -173,7 +173,7 @@ is new and lightly tested.
   from 243 to 317 px. Card open, close (Done, Escape, outside) and input
   blocking checked in the pane; Fib keeps its leaderboard on the page.
 
-## What changed 2026-10-31 → 11-01: 🐢48 egg mode, then 🐢48x (live as v8, main `26d209f`, gh-pages `700070b`)
+## What changed 2026-10-31 → 11-01: 🐢48 egg mode, then 🐢48x (live as v9, main `e875519`, gh-pages `9c35a44`)
 
 README → "🐢48x" has the rules and sim numbers; the reasoning is in
 Claude's memory note `turtle-egg-mode`. In short:
