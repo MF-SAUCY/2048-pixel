@@ -33,8 +33,9 @@
   var SLOT_CAP = 6;
   // Shown small at the foot of the page, so a phone can be checked against
   // the latest deploy while the mode is being tested. Bump it with every
-  // change to the mode: 1 first release, 2 the nest never jumps up, 3 this.
-  var VERSION = 3;
+  // change to the mode: 1 first release, 2 the nest never jumps up, 3 this
+  // line, 4 turning the turtle and the turtles' new movements.
+  var VERSION = 4;
   var EGG = 2048;             // what can be laid
   var CARRY_MIN = 2048;       // what can be carried
 
@@ -259,6 +260,7 @@
     T.TurtleStorage.call(this);
     this.bestScoreKey = "nest-best";
     this.gameStateKey = "nest-state";
+    this.turnKey = "nest-turn";
   }
 
   NestStorage.prototype = Object.create(T.TurtleStorage.prototype);
@@ -306,7 +308,9 @@
     var mark = document.createElement("div");
     mark.className = "nest-mark";
     mark.innerHTML = EGG_GLYPH;
-    board.insertBefore(mark, board.querySelector(".tile-container"));
+    // In the layer that turns with the turtle, under the tiles.
+    var tiles = board.querySelector(".tile-container");
+    tiles.parentNode.insertBefore(mark, tiles);
 
     var choice = document.createElement("div");
     choice.className = "nest-choice";
@@ -465,7 +469,7 @@
       var dy = e.clientY - down.y;
       down = null;
       if (dx * dx + dy * dy > 100) return;
-      var cell = cellAt(ui.board, e.clientX, e.clientY);
+      var cell = cellAt(ui.board, e.clientX, e.clientY, game.turn);
       if (!cell) return;
       if (picking) {
         setPicking(false);
@@ -507,11 +511,16 @@
   }
 
   // The board cell under a point on the page, or null.
-  function cellAt(board, px, py) {
+  // The board may be turned, so the point is turned back first.
+  function cellAt(board, px, py, turn) {
     var rect = board.getBoundingClientRect();
     var v = T.VIEW;
-    var x = v.x + (px - rect.left) / rect.width * v.w;
-    var y = v.y + (py - rect.top) / rect.height * v.h;
+    var p = T.turned({
+      x: v.x + (px - rect.left) / rect.width * v.w,
+      y: v.y + (py - rect.top) / rect.height * v.h
+    }, -(turn || 0));
+    var x = p.x;
+    var y = p.y;
     var best = null;
     var bestD = 30 * 30;
     for (var cx = 0; cx < T.SIZE; cx++) {

@@ -153,6 +153,9 @@
       this.addStartTiles();
     }
     if (this.storageManager.setLastSkin) this.storageManager.setLastSkin(this.skin);
+    // How far the turtle is turned, in sixths of a turn clockwise: a
+    // preference kept for each turtle, not part of the game.
+    this.turn = this.storageManager.getTurn ? this.storageManager.getTurn(this.skin) : 0;
     this.actuate();
   };
 
@@ -201,7 +204,29 @@
   TurtleManager.prototype.actuate = function () {
     root.GameManager.prototype.actuate.call(this);
     if (this.actuator.setSkin) this.actuator.setSkin(this.skin, this.over);
+    if (this.actuator.setTurn) this.actuator.setTurn(this.turn);
     if (this.onLocks) this.onLocks(this.locks);
+  };
+
+  /* Turning (2026-11-01): Turn the turtle, in the menu, turns it a sixth
+   * clockwise, remembered for each of the four turtles. Moves come in as
+   * screen directions (a swipe, key or wedge goes where it points on screen)
+   * and become the turtle's own here; locks stay on the turtle's sides, so
+   * the pad shows them turned too. */
+  TurtleManager.prototype.turnBy = function () {
+    this.turn = (this.turn + 1) % 6;
+    if (this.storageManager.setTurn) this.storageManager.setTurn(this.skin, this.turn);
+    if (this.actuator.setTurn) this.actuator.setTurn(this.turn, true);
+    if (this.onLocks) this.onLocks(this.locks);
+  };
+
+  // The turtle's direction for a screen direction, and back.
+  TurtleManager.prototype.fromScreen = function (direction) {
+    return (direction - (this.turn || 0) + 6) % 6;
+  };
+
+  TurtleManager.prototype.toScreen = function (direction) {
+    return (direction + (this.turn || 0)) % 6;
   };
 
   TurtleManager.prototype.getVector = function (direction) {
@@ -223,11 +248,14 @@
     return cells;
   };
 
-  // Upstream's move, walked over the hexagon.
+  // Upstream's move, walked over the hexagon. direction is a screen direction.
   TurtleManager.prototype.move = function (direction) {
     var self = this;
     this.lastMoved = false;
+    direction = this.fromScreen(direction);
     if (this.isGameTerminated() || this.isLocked(direction)) return;
+    // For the turtle's glance (TurtleActuator).
+    this.actuator.lastDirection = direction;
     var vector = this.getVector(direction);
     if (!vector) return;
     var moved = false;
@@ -296,6 +324,7 @@
     root.LocalStorageManager.call(this);
     this.bestScoreKey = "turtle-best";
     this.gameStateKey = "turtle-state";
+    this.turnKey = "turtle-turn";
   }
 
   if (root.LocalStorageManager) {
@@ -309,6 +338,15 @@
 
   TurtleStorage.prototype.setLastSkin = function (skin) {
     this.storage.setItem("turtle-skin", skin);
+  };
+
+  // Each turtle's turn, as turtle-turn-sage and so on.
+  TurtleStorage.prototype.getTurn = function (skin) {
+    return (parseInt(this.storage.getItem(this.turnKey + "-" + skin), 10) || 0) % 6;
+  };
+
+  TurtleStorage.prototype.setTurn = function (skin, turn) {
+    this.storage.setItem(this.turnKey + "-" + skin, String(turn));
   };
 
   /* ---- input: six directions ---- */
@@ -493,6 +531,10 @@
    * direction will not move by wedge, swipe or key. With locks set, a tap asks
    * "again?" (outlined, as New Game does) and a second within three seconds
    * clears them all.
+   *
+   * When the turtle is turned (Turn the turtle, in the menu) the wedges keep
+   * their screen directions; a lock stays on its side of the turtle, so it
+   * shows on the wedge that side now faces.
    */
 
   var PAD_R = 50;
@@ -620,7 +662,7 @@
       pad.classList.toggle("is-locking", mode === "locking");
       for (var i = 0; i < wedges.length; i++) {
         var dir = parseInt(wedges[i].getAttribute("data-dir"), 10);
-        var locked = locks.indexOf(dir) !== -1;
+        var locked = locks.indexOf(game.fromScreen(dir)) !== -1;
         wedges[i].classList.toggle("is-locked", locked);
         wedges[i].setAttribute("aria-label", PAD_NAMES[dir] + (locked ? " (locked)" : ""));
       }
@@ -667,7 +709,7 @@
       e.preventDefault();
       var dir = parseInt(wedge.getAttribute("data-dir"), 10);
       if (mode === "locking") {
-        game.toggleLock(dir);
+        game.toggleLock(game.fromScreen(dir));
         buzz();
         return;
       }
@@ -717,29 +759,38 @@
 
   var SHELL = "M132 34 H168 L276 96 V244 L168 306 H132 L24 244 V96 Z";
 
+  // The parts that move have their own classes (2026-11-01): head, look
+  // (the eyes' glance), limb-fl and limb-fr (the front limbs; Pocket Pal's
+  // are on its right, where its head is), limb-bl and limb-br, rear-l and
+  // rear-r, tail and squint. Parts drawn with a transform are wrapped in a
+  // group, so an animation moves the group and keeps the shape's own turn.
   var ART = {
     sage:
       '<g class="skin">' +
-        '<ellipse cx="52" cy="74" rx="34" ry="15" transform="rotate(40 52 74)"/>' +
-        '<ellipse cx="248" cy="74" rx="34" ry="15" transform="rotate(-40 248 74)"/>' +
-        '<ellipse cx="52" cy="266" rx="34" ry="15" transform="rotate(-40 52 266)"/>' +
-        '<ellipse cx="248" cy="266" rx="34" ry="15" transform="rotate(40 248 266)"/>' +
+        '<g class="limb-fl"><ellipse cx="52" cy="74" rx="34" ry="15" transform="rotate(40 52 74)"/></g>' +
+        '<g class="limb-fr"><ellipse cx="248" cy="74" rx="34" ry="15" transform="rotate(-40 248 74)"/></g>' +
+        '<g class="limb-bl"><ellipse cx="52" cy="266" rx="34" ry="15" transform="rotate(-40 52 266)"/></g>' +
+        '<g class="limb-br"><ellipse cx="248" cy="266" rx="34" ry="15" transform="rotate(40 248 266)"/></g>' +
         '<polygon points="141,304 159,304 150,318"/>' +
-        '<ellipse cx="150" cy="32" rx="22" ry="21"/>' +
       "</g>" +
-      '<g class="eyes"><circle cx="141" cy="23" r="3"/><circle cx="159" cy="23" r="3"/></g>' +
+      '<g class="head">' +
+        '<ellipse class="skin" cx="150" cy="32" rx="22" ry="21"/>' +
+        '<g class="look"><g class="eyes"><circle cx="141" cy="23" r="3"/><circle cx="159" cy="23" r="3"/></g></g>' +
+      "</g>" +
       '<path class="shell shell-soft" d="' + SHELL + '"/>',
 
     reef:
       '<g class="skin">' +
-        '<path class="flipper-l" d="M94 67 Q55 48 8 127 Q31 136 76 102 Z"/>' +
-        '<path class="flipper-r" d="M206 67 Q245 48 292 127 Q269 136 224 102 Z"/>' +
-        '<path d="M64 251 Q30 262 32 283 Q58 285 87 269 Z"/>' +
-        '<path d="M236 251 Q270 262 268 283 Q242 285 213 269 Z"/>' +
-        '<path d="M142 300 Q147 310 150 314 Q153 310 158 300 Z"/>' +
-        '<path d="M139 45 L136 29 Q135 15 150 15 Q165 15 164 29 L161 45 Z"/>' +
+        '<path class="flipper-l limb-fl" d="M94 67 Q55 48 8 127 Q31 136 76 102 Z"/>' +
+        '<path class="flipper-r limb-fr" d="M206 67 Q245 48 292 127 Q269 136 224 102 Z"/>' +
+        '<path class="rear-l" d="M64 251 Q30 262 32 283 Q58 285 87 269 Z"/>' +
+        '<path class="rear-r" d="M236 251 Q270 262 268 283 Q242 285 213 269 Z"/>' +
+        '<path class="tail" d="M142 300 Q147 310 150 314 Q153 310 158 300 Z"/>' +
       "</g>" +
-      '<g class="eyes"><circle cx="141" cy="25" r="2"/><circle cx="159" cy="25" r="2"/></g>' +
+      '<g class="head">' +
+        '<path class="skin" d="M139 45 L136 29 Q135 15 150 15 Q165 15 164 29 L161 45 Z"/>' +
+        '<g class="look"><g class="eyes"><circle cx="141" cy="25" r="2"/><circle cx="159" cy="25" r="2"/></g></g>' +
+      "</g>" +
       '<path class="shell" d="' + SHELL + '"/>' +
       '<g class="seam">' +
         '<path d="M130 36 L133 41 M170 36 L167 41 M91 59 L96 65 M209 59 L204 65 M51 82 L56 88"/>' +
@@ -751,17 +802,19 @@
     garden:
       '<g class="head">' +
         '<path class="foot" d="M135 47 L133 32 Q133 20 144 20 H156 Q167 20 167 32 L165 47 Z"/>' +
-        '<g class="eyes"><circle cx="140" cy="29" r="2"/><circle cx="160" cy="29" r="2"/></g>' +
+        '<g class="look"><g class="eyes"><circle cx="140" cy="29" r="2"/><circle cx="160" cy="29" r="2"/></g></g>' +
       "</g>" +
       '<g class="foot">' +
-        '<path d="M64 73 L39 65 L18 84 L23 101 L56 102 Z"/>' +
-        '<path d="M236 73 L261 65 L282 84 L277 101 L244 102 Z"/>' +
+        '<path class="limb-fl" d="M64 73 L39 65 L18 84 L23 101 L56 102 Z"/>' +
+        '<path class="limb-fr" d="M236 73 L261 65 L282 84 L277 101 L244 102 Z"/>' +
         '<path d="M56 239 L22 248 L18 267 L38 277 L74 267 Z"/>' +
         '<path d="M244 239 L278 248 L282 267 L262 277 L226 267 Z"/>' +
         '<path d="M142 302 L150 314 L158 302 Z"/>' +
       "</g>" +
+      // Each front foot's claws carry its class too, so they move with it.
       '<g class="claw">' +
-        '<path d="M24 82 L31 87 M29 76 L36 81 M276 82 L269 87 M271 76 L264 81"/>' +
+        '<path class="limb-fl" d="M24 82 L31 87 M29 76 L36 81"/>' +
+        '<path class="limb-fr" d="M276 82 L269 87 M271 76 L264 81"/>' +
         '<path d="M24 265 L32 260 M30 272 L38 267 M276 265 L268 260 M270 272 L262 267"/>' +
       "</g>" +
       '<path class="lip" d="M130 33 H170 L280 95 V245 L170 307 H130 L20 245 V95 Z"/>' +
@@ -774,15 +827,17 @@
 
     pocket:
       '<g class="skin">' +
-        '<path d="M79 69 Q64 46 49 58 Q38 73 61 90 Z"/>' +
-        '<path d="M221 69 Q236 46 251 58 Q262 73 239 90 Z"/>' +
-        '<path d="M79 271 Q64 294 49 282 Q38 267 61 250 Z"/>' +
-        '<path d="M221 271 Q236 294 251 282 Q262 267 239 250 Z"/>' +
-        '<path d="M30 160 Q17 162 6 170 Q17 178 30 180 Z"/>' +
+        '<path class="limb-bl" d="M79 69 Q64 46 49 58 Q38 73 61 90 Z"/>' +
+        '<path class="limb-fl" d="M221 69 Q236 46 251 58 Q262 73 239 90 Z"/>' +
+        '<path class="limb-br" d="M79 271 Q64 294 49 282 Q38 267 61 250 Z"/>' +
+        '<path class="limb-fr" d="M221 271 Q236 294 251 282 Q262 267 239 250 Z"/>' +
+        '<path class="tail" d="M30 160 Q17 162 6 170 Q17 178 30 180 Z"/>' +
         '<path d="M273 149 Q296 145 296 163 V177 Q296 195 273 191 Z"/>' +
       "</g>" +
       '<path class="shell shell-rim" d="' + SHELL + '"/>' +
-      '<g class="eyes blink"><circle cx="285" cy="158" r="2.3"/><circle cx="285" cy="182" r="2.3"/></g>' +
+      '<g class="look"><g class="squint">' +
+        '<g class="eyes blink"><circle cx="285" cy="158" r="2.3"/><circle cx="285" cy="182" r="2.3"/></g>' +
+      "</g></g>" +
       '<path class="smile" d="M289 166 Q294 170 289 174"/>'
   };
 
@@ -799,6 +854,20 @@
     this.gridEl = document.querySelector(".grid-container");
     this.skin = null;
     this.strokeTimer = null;
+    // The art and the tiles turn together in one layer; the message, cards
+    // and sparks stay upright outside it. (The egg mode's nest mark joins.)
+    this.rotor = document.createElement("div");
+    this.rotor.className = "turtle-rotor";
+    this.board.insertBefore(this.rotor, this.gridEl);
+    this.rotor.appendChild(this.gridEl);
+    this.rotor.appendChild(this.tileContainer);
+    this.turnDeg = null;
+    this.turnTimer = null;
+    this.mood = null;
+    this.lastCue = 0;
+    this.cueTimers = {};
+    this.idleTimer = null;
+    this.lastDirection = 0;
   }
 
   if (root.HTMLActuator) {
@@ -816,10 +885,158 @@
     this.board.classList.toggle("is-over", !!over);
   };
 
+  // The board turned by turn sixths. The angle only ever grows, so going
+  // from five sixths back to none turns on clockwise instead of spinning
+  // back; the tiles' numbers turn the other way and stay upright. Only a
+  // turn button press animates (is-turning), not the page loading turned.
+  TurtleActuator.prototype.setTurn = function (turn, animate) {
+    var self = this;
+    if (this.turnDeg === null) {
+      this.turnDeg = turn * 60;
+    } else {
+      var now = ((this.turnDeg / 60) % 6 + 6) % 6;
+      this.turnDeg += ((turn - now + 6) % 6) * 60;
+    }
+    if (animate) {
+      this.board.classList.add("is-turning");
+      clearTimeout(this.turnTimer);
+      this.turnTimer = setTimeout(function () {
+        self.board.classList.remove("is-turning");
+      }, 400);
+    }
+    this.board.style.setProperty("--turn-deg", this.turnDeg + "deg");
+  };
+
+  /* ---- the turtles' movements (2026-11-01; Astra's ideas, all of them) ----
+   *
+   * Each plays once, on a cue class on the board (turtle.css draws it):
+   *
+   *   every turtle  salute  front limbs lift      the first 2048 of a game
+   *                 glance  eyes look the move's way   the first move after 8 s still
+   *   Sage          nod     head dips              a new top tile, from 128 up
+   *                 settle  back feet shift        15 s with no move
+   *   Reef Glider   flick   tail flick             the first 512 and 1024
+   *                 paddle  back flippers stroke   18 s with no move
+   *                 (and its old front stroke on a merge of 256 or more)
+   *   Garden Keeper shuffle front foot shifts      a new top tile, from 256 up
+   *                 peek    head pushes out        12 s with no move
+   *   Pocket Pal    wag     tail wags              the first 128, 256 and 512
+   *                 squint  happy squint           the first 1024
+   *
+   * The top tile counts carried tiles in the egg mode. One movement at most
+   * per move, none within 8 s of the last, nothing once the game is over, and
+   * none when the phone asks for reduced motion (the CSS is behind it).
+   */
+
+  var CUE_MS = {
+    salute: 900, glance: 1000, nod: 700, settle: 600, flick: 600, paddle: 900,
+    shuffle: 600, peek: 1000, wag: 800, squint: 900
+  };
+  var IDLE = { sage: ["settle", 15000], reef: ["paddle", 18000], garden: ["peek", 12000] };
+  var CUE_GAP = 8000;
+  var GLANCE_AFTER = 8000;
+
+  function crossed(before, now, value) {
+    return before < value && now >= value;
+  }
+
+  TurtleActuator.prototype.cue = function (name) {
+    var self = this;
+    var cls = "cue-" + name;
+    this.board.classList.remove(cls);
+    void this.board.offsetWidth; // restart the animation
+    this.board.classList.add(cls);
+    clearTimeout(this.cueTimers[name]);
+    this.cueTimers[name] = setTimeout(function () {
+      self.board.classList.remove(cls);
+    }, CUE_MS[name]);
+    this.lastCue = Date.now();
+  };
+
+  // The movement a move earns, if any: the 2048 salute first, then the
+  // turtle's own milestone, then the glance.
+  TurtleActuator.prototype.pickCue = function (before, top, still) {
+    if (crossed(before, top, 2048)) return "salute";
+    var higher = top > before;
+    switch (this.skin) {
+      case "sage":
+        if (higher && top >= 128) return "nod";
+        break;
+      case "reef":
+        if (crossed(before, top, 512) || crossed(before, top, 1024)) return "flick";
+        break;
+      case "garden":
+        if (higher && top >= 256) return "shuffle";
+        break;
+      case "pocket":
+        if (crossed(before, top, 1024)) return "squint";
+        if (crossed(before, top, 128) || crossed(before, top, 256) ||
+            crossed(before, top, 512)) return "wag";
+        break;
+    }
+    if (still >= GLANCE_AFTER) {
+      var a = ANGLES[this.lastDirection] * Math.PI / 180;
+      this.board.style.setProperty("--gx", (1.8 * Math.cos(a)).toFixed(2) + "px");
+      this.board.style.setProperty("--gy", (1.8 * Math.sin(a)).toFixed(2) + "px");
+      return "glance";
+    }
+    return null;
+  };
+
+  // After each move, the turtle's idle movement waits its time; any move
+  // starts the wait again, so it plays once per pause.
+  TurtleActuator.prototype.waitIdle = function () {
+    var self = this;
+    clearTimeout(this.idleTimer);
+    var idle = IDLE[this.skin];
+    if (!idle) return;
+    this.idleTimer = setTimeout(function () {
+      if (self.mood && !self.mood.over && Date.now() - self.lastCue >= CUE_GAP) self.cue(idle[0]);
+    }, idle[1]);
+  };
+
+  TurtleActuator.prototype.moods = function (grid, meta) {
+    var top = 0;
+    grid.eachCell(function (x, y, tile) {
+      if (tile && tile.value > top) top = tile.value;
+    });
+    if (root.extraTopTile) top = Math.max(top, root.extraTopTile());
+    var now = Date.now();
+
+    // A page load or a new game sets the baseline without a movement.
+    if (!this.mood || meta.moves === 0) {
+      this.mood = { moves: meta.moves, top: top, at: now, over: meta.over };
+      this.waitIdle();
+      return;
+    }
+    // Going back a move (the egg mode's undo) keeps the highs already
+    // reached, so replaying a milestone does not replay its movement.
+    if (meta.moves < this.mood.moves) {
+      this.mood.moves = meta.moves;
+      return;
+    }
+    var moved = meta.moves > this.mood.moves;
+    var before = this.mood.top;
+    this.mood.moves = meta.moves;
+    this.mood.top = Math.max(before, top);
+    this.mood.over = meta.over;
+    if (meta.over) {
+      clearTimeout(this.idleTimer);
+      return;
+    }
+    if (!moved) return; // a lay, carry or send up: no movement of its own
+    var still = now - this.mood.at;
+    this.mood.at = now;
+    var name = this.pickCue(before, top, still);
+    if (name && now - this.lastCue >= CUE_GAP) this.cue(name);
+    this.waitIdle();
+  };
+
   // Reef Glider strokes its front flippers once on a merge of 256 or more.
   TurtleActuator.prototype.actuate = function (grid, meta) {
     var self = this;
     root.HTMLActuator.prototype.actuate.call(this, grid, meta);
+    this.moods(grid, meta);
     if (this.skin !== "reef") return;
     var big = false;
     grid.eachCell(function (x, y, tile) {
@@ -835,9 +1052,21 @@
     }, 800);
   };
 
-  // Spark centres for effects.js, in board pixels.
+  // An art point turned with the board, about the shell's centre.
+  function turned(c, turn) {
+    var a = (turn || 0) * Math.PI / 3;
+    var dx = c.x - 150;
+    var dy = c.y - 170;
+    return {
+      x: 150 + dx * Math.cos(a) - dy * Math.sin(a),
+      y: 170 + dx * Math.sin(a) + dy * Math.cos(a)
+    };
+  }
+
+  // Spark centres for effects.js, in board pixels, where the cell is shown.
   function fxCellCenter(x, y, width) {
-    var c = cellCentre(x, y);
+    var game = root.Turtle && root.Turtle.game;
+    var c = turned(cellCentre(x, y), game && game.turn);
     var scale = width / VIEW.w;
     return { x: (c.x - VIEW.x) * scale, y: (c.y - VIEW.y) * scale };
   }
@@ -852,6 +1081,7 @@
     directionOf: directionOf,
     inHex: inHex,
     cellCentre: cellCentre,
+    turned: turned,
     SIZE: SIZE,
     VECTORS: VECTORS,
     SKINS: SKINS,
@@ -862,10 +1092,28 @@
   var EGG_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
     '<path d="M12 2.5c-3.7 0-6.8 5.6-6.8 10.4a6.8 6.8 0 0 0 13.6 0C18.8 8.1 15.7 2.5 12 2.5z"/></svg>';
 
+  var TURN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>';
+
   if (typeof document !== "undefined" && document.querySelector(".turtle")) {
     root.fxCellCenter = fxCellCenter;
     var eggs = !!document.querySelector(".nest");
     if (root.GameMenu) {
+      // A setting: it turns in place, the menu staying open, and shows how
+      // far this turtle is turned.
+      root.GameMenu.add({
+        label: function () { return "Turn the turtle"; },
+        icon: function () { return TURN_ICON; },
+        value: function () {
+          var game = root.Turtle.game;
+          return (game ? game.turn * 60 : 0) + "°";
+        },
+        stay: true,
+        run: function () {
+          if (root.Turtle.game) root.Turtle.game.turnBy();
+        }
+      });
       root.GameMenu.add({
         label: function () { return eggs ? "Plain 🐢48" : "Egg mode"; },
         icon: function () { return EGG_ICON; },

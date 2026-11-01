@@ -306,6 +306,160 @@
   45%      { transform: rotate(calc(var(--turn, 1) * 7deg)); }
 }
 
+/* ---- turning (2026-11-01) ----
+   The art and tiles share one layer that turns about the shell's centre
+   (150, 170 in the art's units: 50%, 51.92%) by --turn-deg, set by
+   turtle.js. Each tile's face turns back the same amount, so numbers stay
+   upright; a hexagon turned by sixths is the same hexagon. Only a turn from
+   the menu animates. */
+
+.turtle-rotor {
+  position: absolute;
+  inset: 0;
+  transform: rotate(var(--turn-deg, 0deg));
+  transform-origin: 50% 51.923%;
+}
+
+/* Turned, the flippers reach past the screen's sides; they are cut at the
+   screen's edge rather than letting the page scroll sideways. */
+html:has(.container.turtle),
+html:has(.container.turtle) body {
+  overflow-x: clip;
+}
+
+.turtle .tile .tile-inner {
+  rotate: calc(-1 * var(--turn-deg, 0deg));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .is-turning .turtle-rotor {
+    transition: transform 360ms ease;
+  }
+  .is-turning .tile .tile-inner {
+    transition: rotate 360ms ease;
+  }
+}
+
+/* ---- the turtles' movements (2026-11-01; turtle.js picks when) ----
+   Each runs while its cue class is on the board. Front limbs are limb-fl and
+   limb-fr; Pocket Pal's are on its right, beside its head, so it salutes
+   outward instead of up. */
+
+.game-container {
+  --sal-lx: -3px;
+  --sal-ly: -6px;
+  --sal-rx: 3px;
+  --sal-ry: -6px;
+}
+
+[data-skin="pocket"] {
+  --sal-lx: 4px;
+  --sal-ly: -4px;
+  --sal-rx: 4px;
+  --sal-ry: 4px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cue-salute .limb-fl { animation: t-salute-l 900ms ease-in-out; }
+  .cue-salute .limb-fr { animation: t-salute-r 900ms ease-in-out; }
+  .cue-glance .look    { animation: t-glance 1000ms ease-in-out; }
+  .cue-nod .head       { animation: t-nod 700ms ease-in-out; }
+  .cue-settle .limb-bl { animation: t-settle-l 600ms ease-in-out; }
+  .cue-settle .limb-br { animation: t-settle-r 600ms ease-in-out; }
+  .cue-shuffle .limb-fl { animation: t-shuffle 600ms ease-in-out; }
+  .cue-peek .head      { animation: t-peek 1000ms ease-in-out; }
+
+  .cue-flick .tail {
+    transform-box: view-box;
+    transform-origin: 150px 300px;
+    animation: t-flick 600ms ease-in-out;
+  }
+
+  .cue-paddle .rear-l,
+  .cue-paddle .rear-r {
+    transform-box: fill-box;
+    animation: t-paddle 900ms ease-in-out;
+  }
+  .cue-paddle .rear-l { transform-origin: 100% 0; }
+  .cue-paddle .rear-r { transform-origin: 0 0; --turn: -1; }
+
+  .cue-wag .tail {
+    transform-box: view-box;
+    transform-origin: 30px 170px;
+    animation: t-wag 800ms ease-in-out;
+  }
+
+  .cue-squint .squint {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: t-squint 900ms ease-in-out;
+  }
+}
+
+@keyframes t-salute-l {
+  0%, 100% { transform: translate(0, 0); }
+  30%, 70% { transform: translate(var(--sal-lx), var(--sal-ly)); }
+}
+
+@keyframes t-salute-r {
+  0%, 100% { transform: translate(0, 0); }
+  30%, 70% { transform: translate(var(--sal-rx), var(--sal-ry)); }
+}
+
+@keyframes t-glance {
+  0%, 100% { transform: translate(0, 0); }
+  25%, 75% { transform: translate(var(--gx, 0), var(--gy, 0)); }
+}
+
+@keyframes t-nod {
+  0%, 100% { transform: translateY(0); }
+  40%, 60% { transform: translateY(5px); }
+}
+
+@keyframes t-settle-l {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-2px, 2px); }
+}
+
+@keyframes t-settle-r {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(2px, 2px); }
+}
+
+@keyframes t-shuffle {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-3px, 2px); }
+}
+
+@keyframes t-peek {
+  0%, 100% { transform: translateY(0); }
+  30%, 70% { transform: translateY(-4px); }
+}
+
+@keyframes t-flick {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(14deg); }
+  60%      { transform: rotate(-10deg); }
+}
+
+@keyframes t-paddle {
+  0%, 100% { transform: rotate(0deg); }
+  40%      { transform: rotate(calc(var(--turn, 1) * -9deg)); }
+}
+
+@keyframes t-wag {
+  0%, 100% { transform: rotate(0deg); }
+  20%      { transform: rotate(14deg); }
+  40%      { transform: rotate(-14deg); }
+  60%      { transform: rotate(10deg); }
+  80%      { transform: rotate(-6deg); }
+}
+
+@keyframes t-squint {
+  0%, 100% { transform: scaleX(1); }
+  20%, 80% { transform: scaleX(0.3); }
+}
+
 /* ---- tiles ---- */
 
 .turtle .tile {

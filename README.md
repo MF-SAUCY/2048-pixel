@@ -371,6 +371,36 @@ green would be faint on cream.
 Sage was Claude's design, the other three Astra's. The movements are off under
 `prefers-reduced-motion`.
 
+**More movements** (2026-11-01, all of Astra's proposals from 2026-10-27).
+Each plays once, on a cue class on the board, and only on a first or a new
+high, so holding a swipe never sets one off; one at most per move, none within
+8 s of another, none after game over:
+
+- every turtle: a **2048 salute** (front limbs lift) on the first 2048 of a
+  game, and a **glance** (the eyes look the move's way) on the first move
+  after 8 s still;
+- Sage: a **nod** on each new top tile from 128 up, and **settles its back
+  feet** after 15 s with no move;
+- Reef Glider: a **tail flick** on the first 512 and 1024, and **paddles its
+  back flippers** after 18 s (plus its old front stroke);
+- Garden Keeper: a **foot shuffle** on each new top tile from 256 up, and a
+  **peek** after 12 s;
+- Pocket Pal: a **tail wag** on the first 128, 256 and 512, and a **happy
+  squint** on the first 1024.
+
+The egg mode's top tile counts carried tiles. `TurtleActuator.pickCue` picks;
+the moving parts have classes in the art (`head`, `look`, `limb-fl` …).
+
+**Turning** (2026-11-01). Turn the turtle, in the menu, turns it a sixth
+clockwise, remembered for each turtle and each mode (`turtle-turn-sage`,
+`nest-turn-pocket` …), so a new game comes up as that turtle was left. The
+art and tiles turn in one layer (`.turtle-rotor`) and the tiles' faces turn
+back, so numbers stay upright. Swipes, keys and wedges go the way they point
+on screen (`fromScreen` turns them into the turtle's own directions); a lock
+stays on its side of the turtle, so its wedge moves round the pad. Turned,
+the flippers can reach past the screen's sides and are cut there
+(`overflow-x: clip`).
+
 **The pad** (2026-10-20). Six swipe directions made it hard to be sure where a
 swipe would go, so a hexagonal pad sits under the board at the right (half
 the board's width, up to 210px): six wedges, each pointing at the board side

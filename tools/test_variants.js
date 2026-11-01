@@ -365,6 +365,74 @@ test("turtle: a locked direction does not move; the others still do", () => {
   assert.ok(!g.isLocked(0), "a second pick unlocks it");
 });
 
+// A storage with the per-turtle turn, as TurtleStorage keeps it.
+function turnStorage() {
+  const Base = makeStorage();
+  const turns = {};
+  return function Storage() {
+    Base.call(this);
+    this.getTurn = (skin) => turns[skin] || 0;
+    this.setTurn = (skin, t) => { turns[skin] = t; };
+    this.turns = turns;
+  };
+}
+
+test("turtle: turned, a move goes the way it points on screen", () => {
+  const g = turtle();
+  clear(g);
+  put(g, 2, 2, 2);
+  g.turnBy(); // a sixth clockwise: the turtle's up-left now points up
+  assert.strictEqual(g.turn, 1);
+  assert.strictEqual(g.fromScreen(0), 5);
+  assert.strictEqual(g.toScreen(5), 0);
+  g.move(0); // up on screen
+  assert.strictEqual(at(g, 0, 2), 2, "the tile went to the turtle's up-left rim");
+});
+
+test("turtle: a lock stays on its side of the turtle when it turns", () => {
+  const g = turtle();
+  clear(g);
+  put(g, 2, 2, 2);
+  g.toggleLock(0); // the turtle's up
+  g.turnBy();
+  g.move(1); // up-right on screen is the turtle's up: locked
+  assert.strictEqual(g.lastMoved, false);
+  g.move(0); // up on screen is the turtle's up-left: free
+  assert.strictEqual(g.lastMoved, true);
+});
+
+test("turtle: each turtle keeps its own turn", () => {
+  const Storage = turnStorage();
+  const g = new Turtle.TurtleManager(5, Input, Actuator, Storage);
+  const first = g.skin;
+  g.turnBy();
+  g.turnBy();
+  g.restart(); // a different turtle
+  assert.notStrictEqual(g.skin, first);
+  assert.strictEqual(g.turn, 0, "the new turtle has its own turn");
+  g.turnBy();
+  let guard = 0;
+  while (g.skin !== first && guard++ < 50) g.restart();
+  assert.strictEqual(g.turn, 2, "the first turtle came back turned as it was left");
+});
+
+test("turtle: movements fire on firsts and highs, one at a time", () => {
+  const style = { setProperty() {} };
+  const pick = (skin, before, top, still) =>
+    Turtle.TurtleActuator.prototype.pickCue.call(
+      { skin, lastDirection: 0, board: { style } }, before, top, still || 0);
+  assert.strictEqual(pick("sage", 1024, 2048), "salute", "the 2048 salute comes first");
+  assert.strictEqual(pick("sage", 64, 128), "nod");
+  assert.strictEqual(pick("sage", 128, 128), null, "no new high, no nod");
+  assert.strictEqual(pick("reef", 256, 512), "flick");
+  assert.strictEqual(pick("reef", 2048, 4096), null);
+  assert.strictEqual(pick("garden", 128, 256), "shuffle");
+  assert.strictEqual(pick("pocket", 64, 128), "wag");
+  assert.strictEqual(pick("pocket", 512, 1024), "squint");
+  assert.strictEqual(pick("garden", 512, 512, 9000), "glance", "after 8 s still");
+  assert.strictEqual(pick("garden", 512, 512, 3000), null);
+});
+
 test("turtle: locks are saved with the game and cleared by a new game", () => {
   const Storage = makeStorage();
   const g = new Turtle.TurtleManager(5, Input, Actuator, Storage);
