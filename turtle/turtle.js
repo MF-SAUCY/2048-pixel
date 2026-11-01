@@ -381,6 +381,36 @@
   // Set by TurtleManager: whether the last move changed the board.
   HexInputManager.prototype.moved = function () { return false; };
 
+  // New Game is a ↻ icon on the turtle pages (2026-11-01, to give the title
+  // room): it asks for its second tap with the outline alone, keeping the
+  // icon, where classic's button says "Tap again".
+  HexInputManager.prototype.confirmRestart = function (event) {
+    event.preventDefault();
+    if (this.restartArmed || !this.hasProgress()) {
+      this.disarmRestart();
+      this.emit("restart");
+      return;
+    }
+    var button = document.querySelector(".restart-button");
+    this.restartArmed = true;
+    if (button) {
+      button.classList.add("is-armed");
+      button.setAttribute("aria-label", "Tap again for a new game");
+    }
+    this.restartTimer = setTimeout(this.disarmRestart.bind(this), this.restartArmMs);
+  };
+
+  HexInputManager.prototype.disarmRestart = function () {
+    if (!this.restartArmed) return;
+    this.restartArmed = false;
+    clearTimeout(this.restartTimer);
+    var button = document.querySelector(".restart-button");
+    if (button) {
+      button.classList.remove("is-armed");
+      button.setAttribute("aria-label", "New Game");
+    }
+  };
+
   // Move now and, while held, again after classic's pause and at its pace,
   // until a move changes nothing. "aim" tells the pad which wedge to light.
   HexInputManager.prototype.hold = function (direction) {

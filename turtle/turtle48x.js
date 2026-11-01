@@ -25,8 +25,9 @@
 
   // Shown small at the foot of the page, so a phone can be checked against
   // the latest deploy while the mode is being tested. Bump it with every
-  // change to the mode. 1–6 were the egg mode; 7 is 🐢48x's first release.
-  var VERSION = 7;
+  // change to the mode. 1–6 were the egg mode; 7 is 🐢48x's first release;
+  // 8 drops the moves box and makes New Game a ↻ icon, for the title's room.
+  var VERSION = 8;
   var GROW_AT = 600000;
   var GROWN = 7;          // the grown board's array size (radius 3)
   var EARN_FROM = 2048;   // the first tile that earns a Double
