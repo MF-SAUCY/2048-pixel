@@ -173,7 +173,7 @@ is new and lightly tested.
   from 243 to 317 px. Card open, close (Done, Escape, outside) and input
   blocking checked in the pane; Fib keeps its leaderboard on the page.
 
-## What changed 2026-10-31 → 11-01: 🐢48 egg mode, then 🐢48x
+## What changed 2026-10-31 → 11-01: 🐢48 egg mode, then 🐢48x (live as v7, main `002d0e9`, gh-pages `5af4cbb`)
 
 README → "🐢48x" has the rules and sim numbers; the reasoning is in
 Claude's memory note `turtle-egg-mode`. In short:
@@ -199,7 +199,8 @@ Claude's memory note `turtle-egg-mode`. In short:
   or 3 and a `--zoom`); `nest.html` is a redirect; `nest.js` / `nest.css`
   are gone. Own leaderboard columns `turtlex_best`, `turtlex_top`
   (`tools/turtlex_columns.sql`; **run it before the deploy**). Old `nest_*`
-  columns stay as history. Tests: `tools/test_variants.js` (35). Sim:
+  columns stay as history (the SQL was run 2026-11-01; a read of the new
+  columns returns 200). Tests: `tools/test_variants.js` (35). Sim:
   `tools/sim_grow.js` (`shape=6` is what was built); re-run it before
   changing the Double or growth rules. `tools/sim_nest.js` is the egg mode's.
 - **Measured** (Playwright, 412 px wide, heights 915/800/720/640): the
