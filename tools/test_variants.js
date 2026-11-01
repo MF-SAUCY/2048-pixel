@@ -1,4 +1,4 @@
-// Rule tests for the Fib, Threes and Turtle modes, and Turtle's egg mode.
+// Rule tests for the Fib, Threes and Turtle modes, and 🐢48x.
 //
 //   node tools/test_variants.js
 //
@@ -16,13 +16,13 @@ const context = vm.createContext({ Math, JSON, console });
 context.window = context;
 for (const file of ["js/grid.js", "js/tile.js", "js/local_storage_manager.js",
                     "js/game_manager.js", "fib/fib.js", "threes/threes.js",
-                    "turtle/turtle.js", "turtle/nest.js"]) {
+                    "turtle/turtle.js", "turtle/turtle48x.js"]) {
   vm.runInContext(fs.readFileSync(path.join(app, file), "utf8"), context, { filename: file });
 }
 const Fib = vm.runInContext("Fib", context);
 const Threes = vm.runInContext("Threes", context);
 const Turtle = vm.runInContext("Turtle", context);
-const Nest = vm.runInContext("Nest", context);
+const X = vm.runInContext("TurtleX", context);
 const Tile = vm.runInContext("Tile", context);
 
 const plain = (x) => JSON.parse(JSON.stringify(x));
@@ -447,192 +447,139 @@ test("turtle: locks are saved with the game and cleared by a new game", () => {
   assert.deepStrictEqual(plain(again.locks), []);
 });
 
-/* ---- Turtle's egg mode ---- */
+/* ---- 🐢48x ---- */
 
-function nest(Storage) {
-  const g = new Nest.NestManager(5, Input, Actuator, Storage || makeStorage());
+function x48(Storage) {
+  const g = new X.XManager(5, Input, Actuator, Storage || makeStorage());
   clear(g);
   return g;
 }
-// A full board with no equal neighbours (the three-colouring above), less any
-// cells given as "x,y".
-function fullBoard(g, except) {
-  const colours = [2, 4, 8];
-  g.grid.eachCell((x, y) => {
-    if ((except || []).includes(x + "," + y)) return;
-    put(g, x, y, colours[((x - 2 - (y - 2)) % 3 + 3) % 3]);
-  });
+function count(g) {
+  let n = 0;
+  g.grid.eachCell((x, y, t) => { if (t) n++; });
+  return n;
+}
+// A full board with no equal neighbours (the three-colouring above).
+function fullBoard(g, colours) {
+  g.grid.eachCell((x, y) => put(g, x, y, (colours || [2, 4, 8])[((x - y) % 3 + 3) % 3]));
 }
 
-test("eggs: a 2048 on the tail lays as an undo or a slot", () => {
-  const g = nest();
-  put(g, 2, 4, 2048);
-  assert.ok(g.layable());
-  assert.ok(g.lay("undo"));
-  assert.strictEqual(at(g, 2, 4), 0, "the 2048 leaves the board");
-  assert.strictEqual(g.undos, 1);
-  assert.strictEqual(g.laid, 1);
-  put(g, 2, 4, 2048);
-  g.lay("slot");
-  assert.deepStrictEqual(plain(g.slots), [0], "a new empty slot");
-  assert.strictEqual(g.undos, 1);
-});
-
-test("eggs: only a 2048 on the tail can be laid", () => {
-  const g = nest();
-  put(g, 2, 3, 2048);
-  put(g, 2, 4, 4096);
-  assert.ok(!g.layable());
-  assert.ok(!g.lay("undo"));
-  assert.strictEqual(g.undos, 0);
-});
-
-test("eggs: past six slots, an egg is an undo", () => {
-  const g = nest();
-  g.slots = [0, 0, 0, 0, 0, 0];
-  put(g, 2, 4, 2048);
-  g.lay("slot");
-  assert.strictEqual(g.slots.length, Nest.SLOT_CAP);
-  assert.strictEqual(g.undos, 1);
-});
-
-test("eggs: a tile of 2048 or more can be carried into an empty slot", () => {
-  const g = nest();
-  g.slots = [0];
-  put(g, 1, 2, 1024);
-  assert.ok(!g.carry({ x: 1, y: 2 }), "a 1024 is too small");
-  put(g, 3, 1, 4096);
-  assert.ok(g.carry({ x: 3, y: 1 }));
-  assert.deepStrictEqual(plain(g.slots), [4096]);
-  assert.strictEqual(at(g, 3, 1), 0);
-  put(g, 3, 1, 8192);
-  assert.ok(!g.carry({ x: 3, y: 1 }), "no free slot");
-});
-
-test("eggs: a match made on the board jumps up and doubles the carried tile", () => {
-  const g = nest();
-  g.slots = [2048];
-  put(g, 2, 1, 1024);
-  put(g, 2, 2, 1024);
-  g.move(0); // up: the 1024s make a 2048 at the top
-  assert.deepStrictEqual(plain(g.slots), [4096]);
-  let big = 0;
-  g.grid.eachCell((x, y, t) => { if (t && t.value >= 1024) big++; });
-  assert.strictEqual(big, 0, "the new 2048 left the board");
-  assert.strictEqual(g.score, 2048 + 4096, "both merges score");
-});
-
-test("eggs: carried tiles that become equal merge and free a slot", () => {
-  const g = nest();
-  g.slots = [4096, 2048];
+test("x: a Double comes with each new top tile from 2048", () => {
+  const g = x48();
+  put(g, 2, 1, 512);
+  put(g, 2, 2, 512);
+  g.move(0); // up: a 1024
+  assert.strictEqual(g.doubles, 0, "1024 earns nothing");
+  clear(g);
   put(g, 2, 1, 1024);
   put(g, 2, 2, 1024);
   g.move(0);
-  assert.deepStrictEqual(plain(g.slots), [8192, 0]);
-  assert.strictEqual(g.score, 2048 + 4096 + 8192);
-});
-
-test("eggs: a 2048 made on the tail stays to be laid, though a 2048 is carried", () => {
-  const g = nest();
-  g.slots = [2048];
+  assert.strictEqual(g.doubles, 1, "the first 2048");
+  clear(g);
+  put(g, 2, 1, 1024);
   put(g, 2, 2, 1024);
-  put(g, 2, 3, 1024);
-  g.move(3); // down: the 1024s make a 2048 on the tail
-  assert.deepStrictEqual(plain(g.slots), [2048], "the carried 2048 did not take it");
-  assert.strictEqual(at(g, 2, 4), 2048);
-  assert.ok(g.layable());
-  assert.ok(g.lay("undo"));
-  assert.strictEqual(g.undos, 1);
-});
-
-test("eggs: the tile on the tail can be sent up to its carried match", () => {
-  const g = nest();
-  g.slots = [8192, 4096];
-  put(g, 2, 4, 4096);
-  assert.ok(!g.layable());
-  assert.strictEqual(g.sendSlot(), 1);
-  assert.ok(g.sendUp());
-  assert.strictEqual(at(g, 2, 4), 0);
-  assert.deepStrictEqual(plain(g.slots), [16384, 0], "the 8192 then joins the 8192");
-  assert.strictEqual(g.score, 8192 + 16384);
-  assert.ok(!g.canUndo(), "sending up can't be undone");
-  put(g, 2, 4, 512);
-  assert.ok(!g.sendUp(), "no carried 512");
-});
-
-test("eggs: undo takes back the last move and costs an undo", () => {
-  const g = nest();
-  g.undos = 2;
-  put(g, 2, 0, 2);
-  put(g, 2, 1, 2);
-  g.move(3);
-  assert.strictEqual(g.score, 4);
-  assert.ok(g.undo());
-  assert.strictEqual(g.score, 0);
-  assert.strictEqual(at(g, 2, 0), 2);
-  assert.strictEqual(at(g, 2, 1), 2);
-  let n = 0;
-  g.grid.eachCell((x, y, t) => { if (t) n++; });
-  assert.strictEqual(n, 2, "the new tile went too");
-  assert.strictEqual(g.undos, 1);
-  assert.ok(!g.undo(), "one move back only");
-});
-
-test("eggs: laying or carrying cannot be undone", () => {
-  const g = nest();
-  g.undos = 1;
+  g.move(0);
+  assert.strictEqual(g.doubles, 1, "a second 2048 earns nothing");
+  clear(g);
+  put(g, 2, 1, 2048);
   put(g, 2, 2, 2048);
-  g.move(3);
-  assert.strictEqual(at(g, 2, 4), 2048);
-  g.lay("slot");
-  assert.ok(!g.canUndo());
-  assert.ok(!g.undo());
-  assert.strictEqual(g.undos, 1);
+  g.move(0);
+  assert.strictEqual(g.doubles, 2, "the first 4096");
 });
 
-test("eggs: with no move left the game waits while something can help", () => {
-  const g = nest();
+test("x: a Double doubles up to three tiles of 2 to 64, and is not a move", () => {
+  const g = x48();
+  g.doubles = 1;
+  put(g, 0, 2, 2);
+  put(g, 1, 2, 64);
+  put(g, 2, 2, 128);
+  put(g, 3, 2, 8);
+  put(g, 4, 2, 4);
+  assert.ok(!g.useDouble([{ x: 2, y: 2 }]), "128 is too big");
+  assert.strictEqual(g.doubles, 1, "a refused pick uses nothing");
+  assert.ok(g.useDouble([{ x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }]));
+  assert.deepStrictEqual([at(g, 0, 2), at(g, 1, 2), at(g, 2, 2), at(g, 3, 2), at(g, 4, 2)],
+                         [4, 128, 128, 8, 4], "three picks at most; the 128 is skipped");
+  assert.strictEqual(g.doubles, 0);
+  assert.strictEqual(g.score, 0, "scores nothing");
+  assert.strictEqual(g.moves, 0, "not a move");
+  assert.strictEqual(count(g), 5, "no new tile");
+  assert.ok(!g.useDouble([{ x: 0, y: 2 }]), "none left");
+});
+
+test("x: with no move left the game waits while a Double could make a pair", () => {
+  const g = x48();
   fullBoard(g);
-  assert.ok(!g.movesAvailable());
   g.checkOver();
-  assert.ok(g.over, "nothing helps: over");
+  assert.ok(g.over, "no Doubles: over");
 
-  const h = nest();
-  fullBoard(h, ["2,4"]);
-  put(h, 2, 4, 2048);
+  const h = x48();
+  h.doubles = 1;
+  fullBoard(h);
   h.checkOver();
-  assert.ok(!h.over && h.stuck, "the 2048 on the tail can be laid");
+  assert.ok(!h.over && h.stuck, "a 2 beside a 4 can be doubled");
+  h.useDouble([{ x: 2, y: 2 }]); // (x - y) % 3 = 0: a 2
+  assert.ok(!h.over && !h.stuck && h.movesAvailable());
 
-  const k = nest();
-  k.slots = [0];
-  fullBoard(k, ["0,2"]);
-  put(k, 0, 2, 4096);
+  const k = x48();
+  k.doubles = 1;
+  fullBoard(k, [128, 256, 512]);
   k.checkOver();
-  assert.ok(!k.over && k.stuck, "the 4096 can be carried");
-
-  const m = nest();
-  m.slots = [4]; // the three-colouring puts a 4 on the tail
-  fullBoard(m);
-  m.checkOver();
-  assert.ok(!m.over && m.stuck, "the 4 on the tail can be sent up");
+  assert.ok(k.over, "nothing small enough to double: over");
 });
 
-test("eggs: no 2048 win, and the game reloads with its slots and undos", () => {
+test("x: at 600,000 the turtle grows, keeping every tile in place", () => {
+  const g = x48();
+  g.score = 599998;
+  put(g, 2, 1, 2);
+  put(g, 2, 2, 2);
+  put(g, 0, 2, 1024);
+  g.move(0); // up: 2 + 2 = 4, crossing 600,000
+  assert.strictEqual(g.grid.size, 7);
+  assert.strictEqual(g.size, 7);
+  let cells = 0;
+  g.grid.eachCell(() => cells++);
+  assert.strictEqual(cells, 37);
+  assert.strictEqual(at(g, 3, 1), 4, "the 4 at (2,0) is now (3,1)");
+  assert.strictEqual(at(g, 1, 3), 1024, "the 1024 slid to (0,2), now (1,3)");
+  assert.strictEqual(count(g), 3, "the move's own new tile came first");
+  assert.ok(g.freeMove);
+});
+
+test("x: the first move on the grown board adds no tile", () => {
+  const g = x48();
+  g.score = 599998;
+  put(g, 2, 1, 2);
+  put(g, 2, 2, 2);
+  g.move(0);
+  const n = count(g);
+  g.move(3); // down
+  assert.ok(g.lastMoved);
+  assert.strictEqual(count(g), n, "no tile after the free move");
+  assert.ok(!g.freeMove);
+  g.move(0);
+  assert.strictEqual(count(g), n + 1, "the next move adds one");
+});
+
+test("x: no 2048 win, and the game reloads grown with its Doubles", () => {
   const Storage = makeStorage();
-  const g = nest(Storage);
-  g.slots = [8192, 0];
-  g.undos = 3;
+  const g = x48(Storage);
+  g.score = 599998;
   put(g, 2, 0, 1024);
   put(g, 2, 1, 1024);
   g.move(3);
   assert.ok(g.won && !g.isGameTerminated(), "a 2048 does not stop the game");
-  const again = new Nest.NestManager(5, Input, Actuator, Storage);
-  assert.deepStrictEqual(plain(again.slots), [8192, 0]);
-  assert.strictEqual(again.undos, 3);
-  assert.ok(again.canUndo(), "the last move can still be taken back");
+  assert.strictEqual(g.grid.size, 7, "and it grew");
+  const again = new X.XManager(5, Input, Actuator, Storage);
+  assert.strictEqual(again.grid.size, 7);
+  assert.strictEqual(again.size, 7);
+  assert.strictEqual(again.doubles, 1);
+  assert.strictEqual(again.topReached, 2048);
+  assert.ok(again.freeMove);
   again.restart();
-  assert.deepStrictEqual(plain(again.slots), []);
-  assert.strictEqual(again.undos, 0);
+  assert.strictEqual(again.grid.size, 5);
+  assert.strictEqual(again.doubles, 0);
+  assert.ok(!again.freeMove);
 });
 
 console.log("\n" + passed + " tests passed");

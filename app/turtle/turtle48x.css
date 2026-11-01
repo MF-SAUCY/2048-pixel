@@ -1,0 +1,163 @@
+/* 🐢48x (turtle48x.html, turtle48x.js), layered on turtle.css: the ×2 button
+   beside the lock, the tiles picked to double, and the grown turtle. */
+
+/* Plain 🐢48's furniture plus the version line under the pad (16px and the
+   gap). fitPage measures the rest. */
+@media (min-height: 561px) {
+  :root:has(.turtle48x) {
+    --chrome: 194px;
+  }
+}
+
+/* The title's small x. */
+.turtlex-x {
+  font-size: 0.42em;
+  margin-left: 0.04em;
+}
+
+/* The mode's version, small at the foot of the page, for checking a phone
+   is on the latest deploy while the mode is tested. */
+.turtlex-version {
+  margin: -6px 0 0;
+  color: var(--ink);
+  opacity: 0.5;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ---- ×2: the lock button's look; lit (is-locking) while picking, outlined
+   (is-armed) when no move is left but a Double could help ---- */
+
+.turtlex-double {
+  position: relative;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.turtlex-double:disabled {
+  opacity: 0.45;
+}
+
+.turtlex-count {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 11px;
+  background: var(--ink);
+  color: var(--ground);
+  box-shadow: 0 0 0 2px var(--ground);
+  font-size: 13px;
+  line-height: 22px;
+  text-align: center;
+}
+
+.turtlex-count[hidden] {
+  display: none;
+}
+
+/* ---- picking: tiles too big to double fade; a picked tile shows its new
+   value, outlined in the ink ---- */
+
+.game-container.is-doubling .tile-container .tile:not(.tile-2):not(.tile-4):not(.tile-8):not(.tile-16):not(.tile-32):not(.tile-64) {
+  opacity: 0.35;
+}
+
+.turtlex-marks {
+  position: absolute;
+  inset: 0;
+  z-index: 3; /* over the tiles */
+  pointer-events: none;
+}
+
+.turtlex-marks .turtlex-pick {
+  transform: none;
+}
+
+.turtlex-pick svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.turtlex-pick polygon {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 7;
+  stroke-linejoin: round;
+}
+
+/* ---- the grown turtle (radius 3, 37 cells) ----
+   Its cells are 240/11 art units, not 30. The board runs the screen's full
+   width and the turtle is zoomed 1.08 about the shell's centre, the head
+   still showing (mockup B, 2026-11-01); the box shows 175 art units above and
+   below that centre, so it is 1.1664 widths tall, and the rotor keeps its
+   1.04 shape inside it, 12.96 units down. */
+
+.turtle .game-container.is-grown {
+  --grown: min(100vw, calc(var(--board) + 2 * var(--gutter)));
+  --zoom: 1.08;
+  --cell: calc(var(--grown) * 0.17 * 0.727273 * 1.08);
+  width: var(--grown);
+  height: calc(var(--grown) * 1.1664);
+  margin-inline: calc((var(--board) - var(--grown)) / 2);
+}
+
+.is-grown .turtle-rotor {
+  inset: auto;
+  left: 0;
+  top: calc(var(--grown) * 0.0432);
+  width: 100%;
+  height: calc(var(--grown) * 1.04);
+}
+
+.turtle .is-grown .tile {
+  width: 13.5758%;
+  height: 11.3048%;
+}
+
+/* Position stops: cell centres at (150 + 32.73q, 170 + 37.79(r + q / 2)) in
+   the art's units, less half a tile, as percentages of the tile's own box. */
+.turtle .is-grown .tile.tile-position-1-4 { transform: translate(77.2321%, 248.5885%); }
+.turtle .is-grown .tile.tile-position-1-5 { transform: translate(77.2321%, 355.7313%); }
+.turtle .is-grown .tile.tile-position-1-6 { transform: translate(77.2321%, 462.8742%); }
+.turtle .is-grown .tile.tile-position-1-7 { transform: translate(77.2321%, 570.0170%); }
+.turtle .is-grown .tile.tile-position-2-3 { transform: translate(157.5893%, 195.0170%); }
+.turtle .is-grown .tile.tile-position-2-4 { transform: translate(157.5893%, 302.1599%); }
+.turtle .is-grown .tile.tile-position-2-5 { transform: translate(157.5893%, 409.3028%); }
+.turtle .is-grown .tile.tile-position-2-6 { transform: translate(157.5893%, 516.4456%); }
+.turtle .is-grown .tile.tile-position-2-7 { transform: translate(157.5893%, 623.5885%); }
+.turtle .is-grown .tile.tile-position-3-2 { transform: translate(237.9464%, 141.4456%); }
+.turtle .is-grown .tile.tile-position-3-3 { transform: translate(237.9464%, 248.5885%); }
+.turtle .is-grown .tile.tile-position-3-4 { transform: translate(237.9464%, 355.7313%); }
+.turtle .is-grown .tile.tile-position-3-5 { transform: translate(237.9464%, 462.8742%); }
+.turtle .is-grown .tile.tile-position-3-6 { transform: translate(237.9464%, 570.0170%); }
+.turtle .is-grown .tile.tile-position-3-7 { transform: translate(237.9464%, 677.1599%); }
+.turtle .is-grown .tile.tile-position-4-1 { transform: translate(318.3036%, 87.8742%); }
+.turtle .is-grown .tile.tile-position-4-2 { transform: translate(318.3036%, 195.0170%); }
+.turtle .is-grown .tile.tile-position-4-3 { transform: translate(318.3036%, 302.1599%); }
+.turtle .is-grown .tile.tile-position-4-4 { transform: translate(318.3036%, 409.3028%); }
+.turtle .is-grown .tile.tile-position-4-5 { transform: translate(318.3036%, 516.4456%); }
+.turtle .is-grown .tile.tile-position-4-6 { transform: translate(318.3036%, 623.5885%); }
+.turtle .is-grown .tile.tile-position-4-7 { transform: translate(318.3036%, 730.7313%); }
+.turtle .is-grown .tile.tile-position-5-1 { transform: translate(398.6607%, 141.4456%); }
+.turtle .is-grown .tile.tile-position-5-2 { transform: translate(398.6607%, 248.5885%); }
+.turtle .is-grown .tile.tile-position-5-3 { transform: translate(398.6607%, 355.7313%); }
+.turtle .is-grown .tile.tile-position-5-4 { transform: translate(398.6607%, 462.8742%); }
+.turtle .is-grown .tile.tile-position-5-5 { transform: translate(398.6607%, 570.0170%); }
+.turtle .is-grown .tile.tile-position-5-6 { transform: translate(398.6607%, 677.1599%); }
+.turtle .is-grown .tile.tile-position-6-1 { transform: translate(479.0179%, 195.0170%); }
+.turtle .is-grown .tile.tile-position-6-2 { transform: translate(479.0179%, 302.1599%); }
+.turtle .is-grown .tile.tile-position-6-3 { transform: translate(479.0179%, 409.3028%); }
+.turtle .is-grown .tile.tile-position-6-4 { transform: translate(479.0179%, 516.4456%); }
+.turtle .is-grown .tile.tile-position-6-5 { transform: translate(479.0179%, 623.5885%); }
+.turtle .is-grown .tile.tile-position-7-1 { transform: translate(559.3750%, 248.5885%); }
+.turtle .is-grown .tile.tile-position-7-2 { transform: translate(559.3750%, 355.7313%); }
+.turtle .is-grown .tile.tile-position-7-3 { transform: translate(559.3750%, 462.8742%); }
+.turtle .is-grown .tile.tile-position-7-4 { transform: translate(559.3750%, 570.0170%); }

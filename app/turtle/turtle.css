@@ -316,7 +316,8 @@
 .turtle-rotor {
   position: absolute;
   inset: 0;
-  transform: rotate(var(--turn-deg, 0deg));
+  /* --zoom: 🐢48x's grown turtle is drawn a little larger (turtle48x.css). */
+  transform: rotate(var(--turn-deg, 0deg)) scale(var(--zoom, 1));
   transform-origin: 50% 51.923%;
 }
 

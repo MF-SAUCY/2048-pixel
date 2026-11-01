@@ -42,18 +42,16 @@
         "the menu, turns it; swipes still go the way you see, and each turtle " +
         "remembers its turn."
     ],
-    // The egg mode's page is a 🐢48 page too; listed after it, so it wins.
-    nest: [
-      "Plain 🐢48, plus a <b>nest</b> on the tail cell. (Turn the turtle, " +
-        "in the menu, to put the tail where you build.)",
-      "A <b>2048 on the nest</b> can be laid as an egg: tap it. The egg " +
-        "becomes an <b>undo</b> or a new <b>slot</b> on the turtle's back " +
-        "(up to six).",
-      "<b>Carry</b>: tap an empty slot, then a tile of 2048 or more. A carried " +
-        "tile still grows: make its match on the board and it jumps up and " +
-        "doubles. A match on the tail waits: tap it to <b>send it up</b>.",
-      "Undo takes back your last move. Laying, carrying and sending up can't " +
-        "be undone. The game is over only when nothing can help."
+    // 🐢48x's page is a 🐢48 page too; listed after it, so it wins.
+    turtle48x: [
+      "Plain 🐢48, with no 2048 win: play on as long as you can.",
+      "Each time you make a new biggest tile, from <b>2048</b> up, you earn " +
+        "a <b>Double</b>. Tap <b>×2</b>, tap up to three tiles from 2 to 64, " +
+        "then tap ✓ to double them. It isn't a move, so no tile appears.",
+      "At <b>600,000</b> points the turtle grows a new ring of scutes. Your " +
+        "first move after that adds no tile, so you can arrange the bigger " +
+        "board first.",
+      "The game is over when no move is left and no Double could make a pair."
     ]
   };
 

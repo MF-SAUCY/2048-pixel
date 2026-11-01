@@ -19,7 +19,7 @@
  *   the previous display mode. Offline, the cached copy still answers.
  */
 
-var CACHE = "2048-pixel-25a43e2d7d";
+var CACHE = "2048-pixel-7b1011e7a9";
 
 var SHELL = [
   "./",
@@ -67,8 +67,9 @@ var SHELL = [
   "./turtle/turtle.css",
   "./turtle/turtle.js",
   "./turtle/nest.html",
-  "./turtle/nest.css",
-  "./turtle/nest.js",
+  "./turtle/turtle48x.html",
+  "./turtle/turtle48x.css",
+  "./turtle/turtle48x.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",

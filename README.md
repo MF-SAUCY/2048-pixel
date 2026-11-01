@@ -388,12 +388,12 @@ high, so holding a swipe never sets one off; one at most per move, none within
 - Pocket Pal: a **tail wag** on the first 128, 256 and 512, and a **happy
   squint** on the first 1024.
 
-The egg mode's top tile counts carried tiles. `TurtleActuator.pickCue` picks;
+`TurtleActuator.pickCue` picks;
 the moving parts have classes in the art (`head`, `look`, `limb-fl` …).
 
 **Turning** (2026-11-01). Turn the turtle, in the menu, turns it a sixth
 clockwise, remembered for each turtle and each mode (`turtle-turn-sage`,
-`nest-turn-pocket` …), so a new game comes up as that turtle was left. The
+`turtlex-turn-pocket` …), so a new game comes up as that turtle was left. The
 art and tiles turn in one layer (`.turtle-rotor`) and the tiles' faces turn
 back, so numbers stay upright. Swipes, keys and wedges go the way they point
 on screen (`fromScreen` turns them into the turtle's own directions); a lock
@@ -433,39 +433,44 @@ The board is 1.04 times as tall as it is wide and the pad 0.4355 board widths
 tall, so the page divides the height it has left by 1.4755; with the
 leaderboard off the page, `--chrome` is 172 with or without it.
 
-### 🐢48 egg mode
+### 🐢48x
 
-A sub-mode of 🐢48 (`app/turtle/nest.html`, `nest.js`, `nest.css`; "Egg
-mode" in 🐢48's menu, "Plain 🐢48" to go back), built 2026-10-31 so a long
-game need not end because the board fills with big tiles that will never
-pair. It keeps plain 🐢48's casual pace and adds no pressure:
+A sub-mode of 🐢48 (`app/turtle/turtle48x.html`, `turtle48x.js`,
+`turtle48x.css`; "🐢48x" in 🐢48's menu, "Plain 🐢48" to go back), built
+2026-11-01 so a long game need not end because the board fills with big
+tiles that will never pair. It replaced the egg mode (2026-10-31), whose
+slots carried big tiles off the board: Joseph and Amanda found that moving a
+tile off the board at all upset the game's balance and made it too easy.
+`nest.html` now redirects here.
 
-- The tail cell (bottom middle) is the **nest**. A 2048 sitting on it can be
-  laid: tap it, and a card asks what the egg becomes, an **undo** or a new
-  **slot** on the turtle's back (six at most; past that, an undo).
-- **Carry**: tap an empty slot, then a tile of 2048 or more. A carried tile
-  still grows: when a move leaves a matching tile on the board, it jumps up
-  and merges into the carried one (scored as a merge), and carried tiles
-  that become equal merge too, freeing a slot.
-- **A tile on the nest never jumps up** (2026-11-01). Before, a carried 2048
-  pulled up every new 2048 before it could be laid. Tapping the nest's tile
-  now offers "Send up to the carried …" when it has a carried match, beside
-  laying it when it is a 2048.
-- **Undo** takes back the last move; the replay draws a fresh tile. Laying,
-  carrying and sending up can't be undone.
-- With no move left the game waits while an undo, a lay or a carry could
-  help, and says which. There is no 2048 win.
+- **Doubles.** One is earned the first time each tile of 2048 or more
+  appears (2048, 4096, 8192 …). Tap **×2** (left of the lock, in its look,
+  with a badge of Doubles held), tap up to three tiles from 2 to 64, then
+  **✓**. Each picked tile shows its new value outlined; tap it again to
+  unpick. A Double scores nothing, merges nothing on the spot and isn't a
+  move, so no tile appears. It is the way out of a mistake; there is no undo.
+- **The turtle grows** at 600,000 points, once: a ring of 18 scutes around
+  the board, 37 cells, the tiles keeping their places in the middle. **The
+  first move after it adds no tile**, so the bigger board can be arranged
+  before a new tile lands beside a big one. The grown board runs the
+  screen's full width and the turtle is drawn 1.08 times larger, the head
+  still showing (`--zoom`, `.is-grown` in `turtle48x.css`); before growing
+  the page looks like plain 🐢48.
+- With no move left the game waits while a Double could make a pair (a tile
+  of 2 to 64 beside one twice its value; the ×2 button is outlined); only then
+  is it over. There is no 2048 win.
 
-Every egg costs the same (one 2048), which is what keeps the clog from
-coming back. `tools/sim_nest.js` simulated it with a one-move-ahead bot:
-with six slots all 8 games passed 200,000 moves (~7M, 262144 top tile);
-with three, games ended around 122k moves; plain 🐢48 with the same bot
-ends around 13k. An earlier design whose eggs doubled in cost only delayed
-the clog. `TurtleManager` has two hooks for it, `afterSlide` and
-`checkOver`. Its own saved game and best (`nest-state`, `nest-best`) and
-leaderboard columns (`nest_best`, `nest_top`, in `tools/nest_columns.sql`);
-the top tile counts carried tiles. Rule tests are in
-`tools/test_variants.js`.
+`tools/sim_grow.js` simulated it with the one-move-ahead bot (8 games per
+setup): plain play ended around 15k moves (median 389k points); with Doubles
+alone around 38k (1.16M, top 65536). With growth at 600k, games that reached
+it (about move 21k) did not end before the 200,000-move limit, whether the
+turtle grew a full ring (37 cells) or a row on four sides (29); only a
+lopsided three-sided growth (27) still ended some grown games. Joseph chose
+the full ring. The board takes radius 2 or 3 (`HexGrid` size 5 or 7,
+`inHex`/`cellCentre` take the radius, `cellSize` is 240/(3R + 2)). Its own
+saved game and best (`turtlex-state`, `turtlex-best`, `turtlex-turn-…`) and
+leaderboard columns (`turtlex_best`, `turtlex_top`, in
+`tools/turtlex_columns.sql`). Rule tests are in `tools/test_variants.js`.
 
 ## The leaderboard
 
@@ -561,10 +566,15 @@ alter table public.scores
   add column if not exists turtle_best integer not null default 0,
   add column if not exists turtle_top  integer not null default 0;
 
--- 🐢48 egg mode (2026-10-31)
+-- 🐢48 egg mode (2026-10-31; the mode is gone, its scores stay)
 alter table public.scores
   add column if not exists nest_best integer not null default 0,
   add column if not exists nest_top  integer not null default 0;
+
+-- 🐢48x (2026-11-01)
+alter table public.scores
+  add column if not exists turtlex_best integer not null default 0,
+  add column if not exists turtlex_top  integer not null default 0;
 ```
 
 Each page selects only its own columns, so a column missing for one mode
