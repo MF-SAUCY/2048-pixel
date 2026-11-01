@@ -320,11 +320,19 @@
   transform-origin: 50% 51.923%;
 }
 
-/* Turned, the flippers reach past the screen's sides; they are cut at the
-   screen's edge rather than letting the page scroll sideways. */
-html:has(.container.turtle),
-html:has(.container.turtle) body {
-  overflow-x: clip;
+/* Turned, the flippers and head reach past the board's box; they are cut at
+   its edges, as the approved mockup showed (2026-11-01: on Amanda's phone
+   they stuck out). Upright, all four turtles fit inside it. */
+.turtle .game-container {
+  overflow: clip;
+}
+
+/* Nothing on the page shrinks to fit: a squeezed board loses its 1.04 shape,
+   and the tiles, placed by percentages of it, drift off the art's cells
+   (they did on Amanda's phone, turned). turtle.js's fitPage shrinks the
+   board instead when the page runs taller than the screen. */
+.container.turtle > * {
+  flex-shrink: 0;
 }
 
 .turtle .tile .tile-inner {

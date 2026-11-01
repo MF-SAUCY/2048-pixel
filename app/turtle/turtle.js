@@ -1052,6 +1052,48 @@
     }, 800);
   };
 
+  /* --chrome (turtle.css, nest.css) is the page's height around the board,
+   * measured on one screen at one text size. A phone with larger text runs
+   * taller, and the board, which must keep its shape, would be pushed off the
+   * foot of the page. So once the page is built, and again on a resize, the
+   * real overflow is measured and --chrome raised until the board is small
+   * enough: the board and pad scale together, 1.4755 board widths tall
+   * (turtle.css), so a board narrower by d frees 1.4755 d. A few passes,
+   * since the pad stops growing at 210px. */
+  var BOARD_AND_PAD = 1.4755;
+
+  function overflow(container) {
+    var top = Infinity;
+    var bottom = -Infinity;
+    Array.prototype.forEach.call(container.children, function (el) {
+      if (!el.getClientRects().length) return; // hidden
+      var r = el.getBoundingClientRect();
+      var cs = getComputedStyle(el);
+      top = Math.min(top, r.top - (parseFloat(cs.marginTop) || 0));
+      bottom = Math.max(bottom, r.bottom + (parseFloat(cs.marginBottom) || 0));
+    });
+    if (top === Infinity) return 0;
+    var cs = getComputedStyle(container);
+    return bottom - top + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) -
+           container.clientHeight;
+  }
+
+  function fitPage() {
+    var html = document.documentElement;
+    var container = document.querySelector(".container.turtle");
+    var board = document.querySelector(".game-container");
+    if (!container || !board) return;
+    html.style.removeProperty("--chrome");
+    for (var pass = 0; pass < 4; pass++) {
+      var excess = overflow(container);
+      if (excess <= 0.5) return;
+      var width = board.getBoundingClientRect().width;
+      var target = width - excess / BOARD_AND_PAD - 1;
+      html.style.setProperty("--chrome",
+        Math.ceil(container.clientHeight - target * BOARD_AND_PAD) + "px");
+    }
+  }
+
   // An art point turned with the board, about the shell's centre.
   function turned(c, turn) {
     var a = (turn || 0) * Math.PI / 3;
@@ -1082,6 +1124,7 @@
     inHex: inHex,
     cellCentre: cellCentre,
     turned: turned,
+    fitPage: fitPage,
     SIZE: SIZE,
     VECTORS: VECTORS,
     SKINS: SKINS,
@@ -1120,12 +1163,15 @@
         run: function () { window.location.href = eggs ? "./" : "nest.html"; }
       });
     }
-    // The egg mode starts its own game (nest.js).
+    // The egg mode starts its own game (nest.js), and fits the page itself.
     if (!eggs) {
       window.requestAnimationFrame(function () {
         root.Turtle.game = new TurtleManager(SIZE, HexInputManager, TurtleActuator, TurtleStorage);
         buildPad(root.Turtle.game);
+        fitPage();
       });
     }
+    window.addEventListener("resize", fitPage);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPage);
   }
 })(typeof window !== "undefined" ? window : globalThis);

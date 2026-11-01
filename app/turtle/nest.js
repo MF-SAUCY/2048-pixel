@@ -34,8 +34,9 @@
   // Shown small at the foot of the page, so a phone can be checked against
   // the latest deploy while the mode is being tested. Bump it with every
   // change to the mode: 1 first release, 2 the nest never jumps up, 3 this
-  // line, 4 turning the turtle and the turtles' new movements.
-  var VERSION = 4;
+  // line, 4 turning the turtle and the turtles' new movements, 5 the board
+  // keeps its shape on any screen and clips the turned turtle.
+  var VERSION = 5;
   var EGG = 2048;             // what can be laid
   var CARRY_MIN = 2048;       // what can be carried
 
@@ -553,6 +554,7 @@
       // The pad goes in first, so the bar lands between it and the board.
       T.buildPad(game);
       wire(game, buildNest(document.querySelector(".game-container")));
+      T.fitPage();
     });
   }
 })(typeof window !== "undefined" ? window : globalThis);
