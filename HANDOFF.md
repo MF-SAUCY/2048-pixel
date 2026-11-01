@@ -1,6 +1,7 @@
 # Handoff — where this project stands
 
-Written 2026-09-30 at the end of a long session and updated 2026-10-20, so
+Written 2026-09-30 at the end of a long session and updated 2026-10-20 and
+2026-11-01, so
 the next one can pick up without the conversation. `README.md` explains *what* each feature does and
 why; this file is the working state: how to ship, how to test, what's open.
 
@@ -172,6 +173,35 @@ is new and lightly tested.
   from 243 to 317 px. Card open, close (Done, Escape, outside) and input
   blocking checked in the pane; Fib keeps its leaderboard on the page.
 
+## What changed 2026-10-31 → 11-01: 🐢48 egg mode (live as v6, main `97aa007`, gh-pages `c55a783`)
+
+README → "🐢48 egg mode" has the rules and sim numbers; the reasoning is in
+Claude's memory note `turtle-egg-mode`. In short:
+
+- **Why:** Amanda plays 🐢48 casually (audiobook on) and loves pushing score
+  and tiles high; her games end when huge tiles that will never pair fill the
+  board. Egg mode removes that forced end without adding pressure.
+- **Rules:** a 2048 on the tail cell (the nest) can be laid. It becomes an
+  undo or one of 6 slots on the turtle's back. Tiles of 2048+ can be carried
+  into slots; carried tiles merge on their own, chaining (4096 + 2048 + a new
+  2048 → one 8192). A tile on the nest never jumps up by itself ("Send up"
+  instead), so a carried 2048 can't swallow every new one. Undo asks for a
+  second tap.
+- **Also shipped:** "Turn the turtle" (menu row, remembered per turtle and per
+  mode, controls follow the screen), the turtles' movements (cues in
+  `TurtleActuator`), `fitPage()` so the board keeps its shape when the page
+  runs taller than the screen (Amanda's Pixel 11 Pro), and a small
+  "Egg mode vN" line at the page foot. **Bump `VERSION` in `nest.js` with
+  every egg-mode change.**
+- **Files:** `app/turtle/nest.html`, `nest.js`, `nest.css` (built on
+  `turtle.js` / `turtle.css`); own leaderboard columns `nest_best`, `nest_top`
+  (`tools/nest_columns.sql`, already run). Tests: `tools/test_variants.js`
+  (41). Bots: `tools/bot_turtle.js`, `tools/sim_nest.js`; re-run the sim
+  before changing the egg economy (6 slots: endless for decent play; 3 slots:
+  games ended around 122k moves).
+- **Local preview:** `.claude/launch.json` (untracked) has "2048-app", a
+  python http.server on port 8048 serving `app/`.
+
 ## Shipping a change
 
 1. Edit under `app/`. Run `node tools/test_dispatch.js` if Dispatch was
@@ -313,6 +343,13 @@ columns and the ALTERs used are in README → "The leaderboard".
    cells with six directions (the classic bot could be adapted to measure it).
    Fib's tiles above 144 are all the dark super tile; if that is too much dark
    late in a game, extend the ramp (a colour change: show Joseph first).
+
+10. **🐢48 egg mode feedback.** Joseph and Amanda have tested v6 and have
+    ideas and feedback (taken up in a new session 2026-11-01). Still unseen:
+    the turtles' movements in motion on a phone (only checked frozen at their
+    midpoints), and the egg page's `--chrome` (274 px, raised at runtime by
+    `fitPage`) measured on a phone. The nest glow and picking-slot colours
+    (title green) were never approved; show Joseph before changing colours.
 
 ## Known limits (not bugs)
 
