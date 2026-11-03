@@ -212,7 +212,7 @@ Claude's memory note `turtle-egg-mode`. In short:
 - **Local preview:** `.claude/launch.json` (untracked) has "2048-app", a
   python http.server on port 8048 serving `app/`.
 
-## What changed 2026-11-03: 🐢48x v10 (game over)
+## What changed 2026-11-03: 🐢48x v10, game over (live, main `72be8ce`, gh-pages `96d2818`)
 
 - **The game no longer ends with usable Doubles held** (Joseph's feedback). With
   no move left it now waits (×2 outlined) as long as Doubles remain, even if
