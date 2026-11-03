@@ -507,7 +507,7 @@ test("x: a Double doubles up to three tiles of 2 to 64, and is not a move", () =
   assert.ok(!g.useDouble([{ x: 0, y: 2 }]), "none left");
 });
 
-test("x: with no move left the game waits while a Double could make a pair", () => {
+test("x: with no move left the game waits while a Double can be used", () => {
   const g = x48();
   fullBoard(g);
   g.checkOver();
@@ -526,6 +526,37 @@ test("x: with no move left the game waits while a Double could make a pair", () 
   fullBoard(k, [128, 256, 512]);
   k.checkOver();
   assert.ok(k.over, "nothing small enough to double: over");
+
+  // 2s beside 8s and 32s: no one Double makes a pair, but two can.
+  const m = x48();
+  m.doubles = 2;
+  fullBoard(m, [2, 8, 32]);
+  m.checkOver();
+  assert.ok(!m.over && m.stuck, "Doubles left: not over, though one can't make a pair");
+  m.useDouble([{ x: 2, y: 2 }]);
+  assert.ok(!m.over && m.stuck, "one Double left: still waiting");
+  m.useDouble([{ x: 2, y: 2 }]);
+  assert.ok(!m.over && !m.stuck && m.movesAvailable(), "the second made a pair");
+  assert.strictEqual(m.doubles, 0);
+
+  const n = x48();
+  n.doubles = 1;
+  fullBoard(n, [2, 8, 32]);
+  n.checkOver();
+  n.useDouble([{ x: 2, y: 2 }]);
+  assert.ok(n.over && !n.stuck, "the last Double made no pair: over");
+});
+
+test("x: a game waiting on a Double still waits after a reload", () => {
+  const Storage = makeStorage();
+  const g = x48(Storage);
+  g.doubles = 1;
+  fullBoard(g);
+  g.checkOver();
+  g.actuate();
+  const again = new X.XManager(5, Input, Actuator, Storage);
+  assert.ok(again.stuck && !again.over);
+  assert.strictEqual(again.doubles, 1);
 });
 
 test("x: at 600,000 the turtle grows, keeping every tile in place", () => {

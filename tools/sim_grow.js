@@ -195,7 +195,12 @@ function pickDouble(b) {
     for (let k = start; k < el.length; k++) { set.push(el[k]); rec(k + 1, set); set.pop(); }
   };
   rec(0, []);
-  return best;
+  if (best) return best;
+  // No one Double opens a move: double the smallest tile, which only has bigger
+  // neighbours, so it works toward a pair. With none eligible the game is over.
+  let low = -1;
+  for (const i of el) if (low < 0 || b[i] < b[low]) low = i;
+  return low < 0 ? null : [low];
 }
 
 function playOne() {

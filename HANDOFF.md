@@ -202,7 +202,7 @@ Claude's memory note `turtle-egg-mode`. In short:
   are gone. Own leaderboard columns `turtlex_best`, `turtlex_top`
   (`tools/turtlex_columns.sql`; **run it before the deploy**). Old `nest_*`
   columns stay as history (the SQL was run 2026-11-01; a read of the new
-  columns returns 200). Tests: `tools/test_variants.js` (35). Sim:
+  columns returns 200). Tests: `tools/test_variants.js` (36). Sim:
   `tools/sim_grow.js` (`shape=6` is what was built); re-run it before
   changing the Double or growth rules. `tools/sim_nest.js` is the egg mode's.
 - **Measured** (Playwright, 412 px wide, heights 915/800/720/640): the
@@ -211,6 +211,17 @@ Claude's memory note `turtle-egg-mode`. In short:
   since the grown board is taller than 1.04 widths.
 - **Local preview:** `.claude/launch.json` (untracked) has "2048-app", a
   python http.server on port 8048 serving `app/`.
+
+## What changed 2026-11-03: 🐢48x v10 (game over)
+
+- **The game no longer ends with usable Doubles held** (Joseph's feedback). With
+  no move left it now waits (×2 outlined) as long as Doubles remain, even if
+  one alone can't make a pair, such as a 2 beside an 8. It is over at 0 Doubles,
+  and also with Doubles held if no tile of 2 to 64 is on the board, since those
+  can't be spent and the game would otherwise never end. `doubleCouldHelp` became
+  `anyDoubleable`. A waiting game now stays waiting after a reload (the outline
+  used to be lost). `sim_grow.js` follows the new rule: when no single Double
+  opens a move, the bot doubles the smallest tile.
 
 ## Shipping a change
 

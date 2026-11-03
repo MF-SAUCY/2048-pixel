@@ -462,9 +462,11 @@ tile off the board at all upset the game's balance and made it too easy.
   screen's full width and the turtle is drawn 1.08 times larger, the head
   still showing (`--zoom`, `.is-grown` in `turtle48x.css`); before growing
   the page looks like plain 🐢48.
-- With no move left the game waits while a Double could make a pair (a tile
-  of 2 to 64 beside one twice its value; the ×2 button is outlined); only then
-  is it over. There is no 2048 win.
+- With no move left the game waits while a Double can be used (the ×2 button
+  is outlined), even if it takes two to make a pair. It is over once none are
+  left, or if no tile of 2 to 64 is on the board to use one on (Joseph's rule,
+  2026-11-03; before v10 it ended with Doubles held if one Double alone couldn't
+  make a pair). There is no 2048 win.
 
 `tools/sim_grow.js` simulated it with the one-move-ahead bot (8 games per
 setup): plain play ended around 15k moves (median 389k points); with Doubles
