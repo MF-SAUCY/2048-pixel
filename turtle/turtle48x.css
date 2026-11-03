@@ -32,7 +32,7 @@
 }
 
 /* ---- ×2: the lock button's look; lit (is-locking) while picking, outlined
-   (is-armed) when no move is left but a Double could help ---- */
+   (is-armed) when no move is left but a Double can be used ---- */
 
 .turtlex-double {
   position: relative;

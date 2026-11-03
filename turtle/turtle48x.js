@@ -10,8 +10,9 @@
  *     board (37 cells), the tiles keeping their places in the middle. The first
  *     move after it adds no tile, so the bigger board can be arranged before a
  *     new tile can land beside a big one.
- *   - With no move left the game waits while a Double could make a pair; only
- *     then is it over. There is no 2048 win.
+ *   - With no move left the game waits while a Double can still be used: it
+ *     is over once none are left, or no tile is small enough to double. There
+ *     is no 2048 win.
  *
  * Its own saved game and best score (turtlex-state, turtlex-best) and its own
  * leaderboard columns (turtlex_best, turtlex_top). Built on turtle.js.
@@ -27,8 +28,9 @@
   // the latest deploy while the mode is being tested. Bump it with every
   // change to the mode. 1–6 were the egg mode; 7 is 🐢48x's first release;
   // 8 drops the moves box and makes New Game a ↻ icon, for the title's room;
-  // 9 gives Turn the turtle a right-angle icon.
-  var VERSION = 9;
+  // 9 gives Turn the turtle a right-angle icon; 10 is not over while a Double
+  // can still be used.
+  var VERSION = 10;
   var GROW_AT = 600000;
   var GROWN = 7;          // the grown board's array size (radius 3)
   var EARN_FROM = 2048;   // the first tile that earns a Double
@@ -55,6 +57,7 @@
     this.earned = false;    // set for the actuate after a Double is earned
     T.TurtleManager.prototype.setup.call(this);
     this.size = this.grid.size; // a saved grown game comes back grown
+    this.stuck = !this.over && !this.movesAvailable(); // and a waiting one waiting
   };
 
   // No 2048 win here: the game only ends when it is over.
@@ -111,7 +114,7 @@
     if (!this.isGrown() && this.score >= GROW_AT) this.grow();
     this.stuck = false;
     if (this.movesAvailable()) return;
-    if (this.doubles > 0 && this.doubleCouldHelp()) {
+    if (this.doubles > 0 && this.anyDoubleable()) {
       this.stuck = true;
     } else {
       this.over = true;
@@ -144,18 +147,13 @@
     this.grew = true;
   };
 
-  // On a stuck board only a doubled tile beside a tile twice its value can
-  // make a pair: two doubled tiles were unequal before and stay unequal.
-  XManager.prototype.doubleCouldHelp = function () {
+  // A Double may take two uses to make a pair (a 2 beside an 8), so any tile it
+  // can take is reason to wait. With none, the Doubles held can't be used.
+  XManager.prototype.anyDoubleable = function () {
     var self = this;
     var found = false;
     this.grid.eachCell(function (x, y, tile) {
-      if (found || !tile || !self.canDouble(tile)) return;
-      for (var d = 0; d < 6; d++) {
-        var v = T.VECTORS[d];
-        var other = self.grid.cellContent({ x: x + v.x, y: y + v.y });
-        if (other && other.value === tile.value * 2) found = true;
-      }
+      if (tile && self.canDouble(tile)) found = true;
     });
     return found;
   };
@@ -261,7 +259,7 @@
       ui.label.textContent = picking ? "✓" : "×2";
       ui.button.disabled = !picking && (held < 1 || game.over);
       ui.button.classList.toggle("is-locking", picking);
-      // No moves left but a Double could help: the button asks, as New Game does.
+      // No moves left but a Double can be used: the button asks, as New Game does.
       ui.button.classList.toggle("is-armed", !picking && game.stuck);
       var label = picking ? "Double the picked tiles" :
         held === 1 ? "Double: 1 left" : "Double: " + held + " left";
